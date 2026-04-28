@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GymLog</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f0f0f;
+      color: #f0f0f0;
+      font-family: system-ui, sans-serif;
+      padding: 24px 16px 48px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    h1 { font-size: 1.4rem; margin-bottom: 24px; letter-spacing: 0.05em; }
+
+    .exercise-block {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .exercise-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .exercise-header span { font-size: 0.85rem; color: #888; }
+
+    label { display: block; font-size: 0.8rem; color: #888; margin-bottom: 4px; margin-top: 12px; }
+
+    input, select {
+      width: 100%;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #f0f0f0;
+      font-size: 1rem;
+      padding: 10px 12px;
+    }
+
+    input:focus, select:focus { outline: none; border-color: #555; }
+
+    select option { background: #111; }
+
+    .sets-table { width: 100%; margin-top: 12px; border-collapse: collapse; }
+
+    .sets-table th {
+      font-size: 0.75rem;
+      color: #666;
+      text-align: left;
+      padding-bottom: 6px;
+    }
+
+    .sets-table td { padding: 4px 4px 4px 0; }
+
+    .sets-table input {
+      padding: 8px 10px;
+      font-size: 0.95rem;
+    }
+
+    .sets-table td:last-child { width: 36px; text-align: center; }
+
+    .btn-icon {
+      background: none;
+      border: none;
+      color: #555;
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+    }
+
+    .btn-icon:hover { color: #f0f0f0; }
+
+    .btn-add-set {
+      background: none;
+      border: 1px dashed #333;
+      border-radius: 6px;
+      color: #666;
+      font-size: 0.85rem;
+      padding: 8px;
+      width: 100%;
+      margin-top: 8px;
+      cursor: pointer;
+    }
+
+    .btn-add-set:hover { border-color: #555; color: #aaa; }
+
+    .btn-add-exercise {
+      background: none;
+      border: 1px dashed #333;
+      border-radius: 10px;
+      color: #666;
+      font-size: 0.95rem;
+      padding: 14px;
+      width: 100%;
+      margin-bottom: 24px;
+      cursor: pointer;
+    }
+
+    .btn-add-exercise:hover { border-color: #555; color: #aaa; }
+
+    .btn-submit {
+      background: #f0f0f0;
+      color: #0f0f0f;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      padding: 14px;
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .btn-submit:hover { background: #ccc; }
+    .btn-submit:disabled { background: #333; color: #666; cursor: default; }
+
+    #toast {
+      display: none;
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 12px 20px;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+
+    #toast.success { border-color: #2a6a2a; color: #6fcf6f; }
+    #toast.error { border-color: #6a2a2a; color: #cf6f6f; }
+  </style>
+</head>
+<body>
+  <h1>GymLog</h1>
+
+  <div id="exercises"></div>
+
+  <button class="btn-add-exercise" onclick="addExercise()">+ Add Exercise</button>
+
+  <button class="btn-submit" id="submitBtn" onclick="submitWorkout()">Log Workout</button>
+
+  <div id="toast"></div>
+
+  <script>
+    const MUSCLE_GROUPS = ["chest","back","shoulders","biceps","triceps","legs","abs","forearms"];
+
+    let exerciseCount = 0;
+
+    function addExercise() {
+      const id = exerciseCount++;
+      const div = document.createElement("div");
+      div.className = "exercise-block";
+      div.id = `exercise-${id}`;
+      div.innerHTML = `
+        <div class="exercise-header">
+          <span>Exercise ${id + 1}</span>
+          <button class="btn-icon" onclick="removeExercise(${id})" title="Remove">✕</button>
+        </div>
+        <label>Name</label>
+        <input type="text" id="name-${id}" placeholder="e.g. bench press" autocomplete="off" />
+        <label>Muscle Group</label>
+        <select id="muscle-${id}">
+          ${MUSCLE_GROUPS.map(g => `<option value="${g}">${g}</option>`).join("")}
+        </select>
+        <table class="sets-table">
+          <thead><tr><th>Set</th><th>Reps</th><th>Weight (lbs)</th><th></th></tr></thead>
+          <tbody id="sets-${id}"></tbody>
+        </table>
+        <button class="btn-add-set" onclick="addSet(${id})">+ Add Set</button>
+      `;
+      document.getElementById("exercises").appendChild(div);
+      addSet(id);
+    }
+
+    function removeExercise(id) {
+      document.getElementById(`exercise-${id}`).remove();
+    }
+
+    let setCounts = {};
+
+    function addSet(exerciseId) {
+      if (!setCounts[exerciseId]) setCounts[exerciseId] = 0;
+      const setNum = setCounts[exerciseId]++;
+      const tbody = document.getElementById(`sets-${exerciseId}`);
+      const tr = document.createElement("tr");
+      tr.id = `set-${exerciseId}-${setNum}`;
+      tr.innerHTML = `
+        <td style="color:#666;font-size:0.85rem;width:32px">${setNum + 1}</td>
+        <td><input type="number" id="reps-${exerciseId}-${setNum}" placeholder="8" min="1" /></td>
+        <td><input type="number" id="weight-${exerciseId}-${setNum}" placeholder="—" min="0" step="2.5" /></td>
+        <td><button class="btn-icon" onclick="removeSet('${exerciseId}-${setNum}')" title="Remove">✕</button></td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    function removeSet(id) {
+      document.getElementById(`set-${id}`).remove();
+    }
+
+    async function submitWorkout() {
+      const exerciseBlocks = document.querySelectorAll(".exercise-block");
+      const exercises = [];
+
+      for (const block of exerciseBlocks) {
+        const id = block.id.replace("exercise-", "");
+        const name = document.getElementById(`name-${id}`).value.trim();
+        const muscle_group = document.getElementById(`muscle-${id}`).value;
+
+        if (!name) { showToast("Exercise name can't be empty", "error"); return; }
+
+        const setRows = document.querySelectorAll(`#sets-${id} tr`);
+        const sets = [];
+
+        for (const row of setRows) {
+          const rowId = row.id.replace("set-", "");
+          const reps = parseInt(document.getElementById(`reps-${rowId}`).value);
+          const weightVal = document.getElementById(`weight-${rowId}`).value;
+          const weight_lbs = weightVal ? parseFloat(weightVal) : null;
+
+          if (!reps || reps < 1) { showToast("Each set needs a rep count", "error"); return; }
+          sets.push(weight_lbs !== null ? { reps, weight_lbs } : { reps });
+        }
+
+        if (sets.length === 0) { showToast("Add at least one set", "error"); return; }
+        exercises.push({ name, muscle_group, sets });
+      }
+
+      if (exercises.length === 0) { showToast("Add at least one exercise", "error"); return; }
+
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      btn.textContent = "Logging...";
+
+      try {
+        const res = await fetch("/workouts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ exercises }),
+        });
+
+        if (!res.ok) throw new Error(await res.text());
+
+        const data = await res.json();
+        showToast(`Logged! ${data.exercises_logged} exercises, ${data.sets_logged} sets`, "success");
+        document.getElementById("exercises").innerHTML = "";
+        setCounts = {};
+        exerciseCount = 0;
+        addExercise();
+      } catch (e) {
+        showToast("Error logging workout", "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Log Workout";
+      }
+    }
+
+    function showToast(msg, type) {
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.className = type;
+      t.style.display = "block";
+      setTimeout(() => t.style.display = "none", 3000);
+    }
+
+    addExercise();
+  </script>
+</body>
+</html>
