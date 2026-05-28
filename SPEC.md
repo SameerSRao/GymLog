@@ -1,31 +1,7 @@
 # GymLog Spec
 
 ## Overview
-Personal gym workout tracker. Natural language input via web UI or SMS. Claude parses input into structured data stored in a database.
-
----
-
-## Current Work
-
-**Goal:** Barebones form-based frontend accessible from a public domain, usable in the gym.
-
-**Frontend — structured form (no NL yet)**
-- Add multiple exercises per workout (dynamic rows)
-- Per exercise: name, muscle group, sets (reps + optional weight)
-- Submit → `POST /workouts`
-- Mobile-friendly, minimal UI
-- Served by FastAPI at `GET /`
-
-**Deployment**
-- Host on Railway (Docker-native, connects to GitHub repo, auto-deploys)
-- Swap SQLite → Railway Postgres (avoids persistent volume complexity)
-- Public URL provided by Railway on deploy
-
-**Changes needed**
-- `app/static/index.html` — the form UI
-- FastAPI serves static files at `/`
-- `DATABASE_URL` env var on Railway points to Postgres
-- `requirements.txt` — add `psycopg2-binary` for Postgres driver
+Personal gym workout tracker. Form-based web UI for logging workouts, browsing history, and tracking lift progression over time.
 
 ---
 
@@ -36,7 +12,6 @@ Personal gym workout tracker. Natural language input via web UI or SMS. Claude p
 | ORM | SQLAlchemy |
 | DB (local) | SQLite via Docker volume |
 | DB (deploy) | Postgres — swap `DATABASE_URL` |
-| NLP | Claude API |
 | Server | Uvicorn |
 
 ---
@@ -48,160 +23,221 @@ GymLog/
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
-├── .env
-├── .env.example
-├── data/               ← SQLite db lives here (volume mounted)
+├── exercises.json          ← 1,324 seeded exercises (source of truth)
+├── data/                   ← SQLite db (volume mounted)
 └── app/
-    ├── main.py
+    ├── main.py             ← app setup, page routes, startup seed
     ├── db/
-    │   └── database.py ← engine, SessionLocal, Base, get_db()
+    │   ├── database.py     ← engine, SessionLocal, Base, get_db()
+    │   └── seed.py         ← seeds exercises + muscle groups from exercises.json
     ├── model/
-    │   └── models.py   ← ORM models
-    ├── services/       ← DB read/write logic
-    │   └── workout_service.py
-    └── api/
-        ├── routes.py   ← route handlers
-        └── schemas.py  ← Pydantic request/response models
+    │   └── models.py       ← ORM models
+    ├── services/
+    │   ├── workout_service.py
+    │   └── exercise_service.py
+    ├── api/
+    │   ├── routes.py       ← workout route handlers
+    │   ├── exercise_routes.py
+    │   └── schemas.py      ← Pydantic request/response models
+    └── static/
+        ├── index.html      ← log workout page
+        ├── workouts.html   ← calendar view
+        ├── workout.html    ← single workout detail
+        └── exercise.html   ← exercise info + progression
 ```
 
 ---
 
 ## Database Schema
 
+### `muscle_groups`
+| Column | Type | Notes |
+|--------|------|-------|
+| id | INTEGER | primary key |
+| name | TEXT | unique — 45 canonical muscles (aliases collapsed) |
+
+### `exercise_muscle_groups` (join table)
+| Column | Type | Notes |
+|--------|------|-------|
+| exercise_id | INTEGER | FK → exercises.id |
+| muscle_group_id | INTEGER | FK → muscle_groups.id |
+
+### `exercises`
+| Column | Type | Notes |
+|--------|------|-------|
+| id | INTEGER | primary key |
+| name | TEXT | unique |
+| equipment | TEXT | nullable — e.g. "barbell", "dumbbell" |
+| target | TEXT | nullable — primary target muscle from seed data |
+| instructions | TEXT | nullable — English how-to text |
+
 ### `workout_sessions`
 | Column | Type | Notes |
 |--------|------|-------|
 | id | INTEGER | primary key |
-| raw_input | TEXT | nullable — stores original NL message |
-| logged_at | DATETIME | UTC timestamp, default now |
+| raw_input | TEXT | nullable |
+| logged_at | DATETIME | UTC, default now |
 
 ### `exercise_sets`
 | Column | Type | Notes |
 |--------|------|-------|
 | id | INTEGER | primary key |
-| session_id | INTEGER | foreign key → workout_sessions.id |
-| exercise_name | TEXT | e.g. "bench press" |
-| muscle_group | TEXT | e.g. "chest" |
+| session_id | INTEGER | FK → workout_sessions.id |
+| exercise_id | INTEGER | FK → exercises.id |
 | set_number | INTEGER | 1-indexed |
-| reps | INTEGER | per set — variable across sets |
+| reps | INTEGER | |
 | weight_lbs | FLOAT | nullable (bodyweight exercises) |
-| logged_at | DATETIME | UTC timestamp, default now |
-
-### `weight_logs` *(Phase 2)*
-| Column | Type | Notes |
-|--------|------|-------|
-| id | INTEGER | primary key |
-| weight_lbs | FLOAT | |
-| logged_at | DATETIME | UTC timestamp, default now |
+| logged_at | DATETIME | UTC, default now |
 
 ---
 
-## API
+## Routing
 
-### Current
+### HTML pages (served by FastAPI, no prefix)
+| Route | Page |
+|-------|------|
+| `GET /` | Log workout |
+| `GET /workouts` | Calendar + recent list |
+| `GET /workout/{id}` | Workout detail |
+| `GET /exercise/{id}` | Exercise info + progression |
 
-#### `POST /workouts`
-Log a workout session.
+### JSON API (all under `/api`)
 
-**Request**
+#### Exercises
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | `/api/exercises` | List all exercises (id, name, equipment, target, muscle_groups) |
+| POST | `/api/exercises` | Create a custom exercise |
+| GET | `/api/muscle-groups` | List all muscle groups |
+| GET | `/api/exercise/{id}/info` | Single exercise detail |
+| GET | `/api/exercise/{id}/progression` | Workout history grouped by session |
+
+#### Workouts
+| Method | Route | Description |
+|--------|-------|-------------|
+| POST | `/api/workouts` | Log a workout session |
+| GET | `/api/workouts` | List all sessions (summary) |
+| GET | `/api/workout/{id}` | Session detail with full exercise + set data |
+| PUT | `/api/workout/{id}` | Replace all exercises/sets for a session |
+| DELETE | `/api/workout/{id}` | Delete session and all its sets |
+
+#### Request/response shapes
+
+**POST `/api/workouts`**
 ```json
 {
   "exercises": [
     {
-      "name": "bench press",
-      "muscle_group": "chest",
+      "exercise_id": 42,
       "sets": [
         { "reps": 6, "weight_lbs": 155 },
         { "reps": 6, "weight_lbs": 155 },
         { "reps": 5, "weight_lbs": 155 }
-      ]
-    },
-    {
-      "name": "pull ups",
-      "muscle_group": "back",
-      "sets": [
-        { "reps": 10 },
-        { "reps": 9 }
       ]
     }
   ]
 }
 ```
 
-**Response**
+**GET `/api/workout/{id}`**
 ```json
 {
   "session_id": 1,
   "logged_at": "2026-04-28T10:30:00Z",
-  "exercises_logged": 2,
-  "sets_logged": 5
+  "exercises": [
+    {
+      "exercise_id": 42,
+      "name": "Barbell Bench Press",
+      "muscle_groups": [
+        { "id": 7, "name": "pectorals" },
+        { "id": 12, "name": "shoulders" },
+        { "id": 18, "name": "triceps" }
+      ],
+      "sets": [
+        { "reps": 6, "weight_lbs": 155 },
+        { "reps": 6, "weight_lbs": 155 },
+        { "reps": 5, "weight_lbs": 155 }
+      ]
+    }
+  ]
 }
 ```
 
-#### `GET /workouts`
-List all sessions (summary).
-
-#### `GET /workout/{session_id}`
-Fetch one session with full exercise detail.
-
-#### `PUT /workout/{session_id}`
-Full replace — swaps all exercises/sets for a session.
-
-#### `DELETE /workout/{session_id}`
-Delete a session and all its sets.
-
----
-
-### Phase 1 — NL + Web UI
-
-#### `POST /chat`
-Accepts a free-text message, returns a natural language response.
-
-**Request**
+**GET `/api/exercise/{id}/progression`**
 ```json
-{ "message": "did upper: bench 155 6,6,5; pull ups 10,9,10" }
+{
+  "exercise_id": 42,
+  "exercise_name": "Barbell Bench Press",
+  "sessions": [
+    {
+      "session_id": 1,
+      "logged_at": "2026-04-21T10:00:00Z",
+      "sets": [
+        { "set_number": 1, "reps": 6, "weight_lbs": 155 }
+      ],
+      "volume": 930.0,
+      "best_set_weight": 155.0
+    }
+  ]
+}
 ```
 
-**Response**
-```json
-{ "reply": "Logged! Bench press 155 lbs — 3 sets (6,6,5). Pull ups — 3 sets (10,9,10)." }
-```
+---
 
-**Flow:**
-1. Message → Claude with system prompt
-2. Claude returns structured JSON (`intent` + `data`)
-3. Backend calls existing service functions
-4. Claude generates a friendly confirmation
-5. `raw_input` stored on the workout session
+## Pages
 
-#### `GET /` — Web chat UI
-Mobile-friendly single-page chat interface served by FastAPI.
+### `/` — Log Workout
+- Searchable exercise dropdown per block (token-based: "weighted dip" matches "weighted tricep dip")
+- Per-block multi-select filters for muscle group and equipment (with search + clear)
+- Tags show equipment + muscle groups on selection, with a link to the exercise's progression page
+- Add multiple exercises, add/remove sets per exercise
+- Submit → `POST /api/workouts`, shows "View workout →" link after success
+- "New Exercise" form to create custom exercises with muscle group checkboxes
+- Link to `/workouts` in the header
+
+### `/workouts` — Calendar
+- Month calendar, days with workouts highlighted green
+- Days with multiple workouts show dot indicators; clicking opens a picker popup
+- Recent workouts list below (date, time, exercise count)
+- Prev/next month navigation
+
+### `/workout/{id}` — Workout Detail
+- Date, exercise count, set count
+- Per exercise: name, full muscle group tags, sets table, volume + best weight summary
+- "View progression →" link per exercise → `/exercise/{id}`
+- Delete button with confirmation modal
+
+### `/exercise/{id}` — Exercise Detail
+- Name, equipment tag, muscle group tags
+- Collapsible "How to perform" instructions
+- Line chart of best set weight over sessions (shown once ≥2 sessions exist)
+- Session cards newest-first: sets, volume, best weight
 
 ---
 
-### Phase 2 — Weight Tracking
+## Seeding
 
-#### `POST /log/weight`
-```json
-{ "weight_lbs": 145 }
-```
+On startup, `seed.py` checks if the exercises table is empty. If so:
+- Reads `exercises.json` (1,324 exercises)
+- Collapses muscle name aliases (e.g. abdominals→abs, quadriceps→quads, trapezius→traps, deltoids→delts, latissimus dorsi→lats)
+- Creates 45 canonical `MuscleGroup` records
+- Creates `ExerciseDef` records linked to their muscle groups via the join table
+- Stores equipment, target muscle, and English instructions per exercise
 
-NL trigger: *"weighed in at 145"*
-
----
-
-### Phase 3 — SMS
-
-#### `POST /sms`
-Twilio webhook. Same NL pipeline as `/chat`.
+Seeding is idempotent — skipped if exercises already exist.
 
 ---
 
-## Phases
+## What's Not Built Yet
 
-| Phase | What | Status |
-|-------|------|--------|
-| 0 | Structured CRUD API + Docker | ✅ Done |
-| 1 | Claude NL parsing + web chat UI | Next |
-| 2 | Weight tracking | Backlog |
-| 3 | SMS via Twilio | Backlog |
+| Feature | Notes |
+|---------|-------|
+| Edit workout UI | PUT endpoint exists, no frontend |
+| Personal records | No PR detection or highlighting |
+| Workout notes | No free-text notes per session |
+| Exercise browser | No page to browse/search all exercises outside of logging |
+| Volume / rep trend charts | Progression page only charts best weight |
+| Auth / multi-user | Single user only |
+| Natural language input | Was in original spec, deprioritized |
+| SMS via Twilio | Was in original spec, deprioritized |
+| Weight tracking | Was in original spec, deprioritized |

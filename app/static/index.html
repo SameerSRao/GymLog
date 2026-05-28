@@ -16,7 +16,14 @@
       margin: 0 auto;
     }
 
-    h1 { font-size: 1.4rem; margin-bottom: 24px; letter-spacing: 0.05em; }
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    h1 { font-size: 1.4rem; letter-spacing: 0.05em; }
 
     .exercise-block {
       background: #1a1a1a;
@@ -48,8 +55,73 @@
     }
 
     input:focus, select:focus { outline: none; border-color: #555; }
-
     select option { background: #111; }
+
+    /* Searchable dropdown */
+    .ex-select-wrap { position: relative; }
+
+    .ex-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0; right: 0;
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+    }
+
+    .ex-dropdown.open { display: block; }
+
+    .ex-dropdown-item {
+      padding: 10px 12px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      border-bottom: 1px solid #222;
+    }
+
+    .ex-dropdown-item:last-child { border-bottom: none; }
+    .ex-dropdown-item:hover, .ex-dropdown-item.focused { background: #252525; }
+
+    .ex-dropdown-item .item-meta {
+      font-size: 0.75rem;
+      color: #666;
+      margin-top: 2px;
+    }
+
+    .ex-dropdown-empty {
+      padding: 12px;
+      color: #555;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    .muscle-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .muscle-tag {
+      background: #252525;
+      border: 1px solid #3a3a3a;
+      border-radius: 4px;
+      color: #aaa;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+    }
+
+    .equipment-tag {
+      background: #1c1c2e;
+      border: 1px solid #3a3a5a;
+      border-radius: 4px;
+      color: #8888cc;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+    }
 
     .sets-table { width: 100%; margin-top: 12px; border-collapse: collapse; }
 
@@ -124,6 +196,42 @@
     .btn-submit:hover { background: #ccc; }
     .btn-submit:disabled { background: #333; color: #666; cursor: default; }
 
+    .btn-new-exercise {
+      background: none;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #888;
+      font-size: 0.85rem;
+      padding: 7px 12px;
+      cursor: pointer;
+    }
+
+    .btn-new-exercise:hover { border-color: #555; color: #ccc; }
+
+    .mg-checkboxes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .mg-checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: #aaa;
+      user-select: none;
+    }
+
+    .mg-checkbox-label:hover { border-color: #555; }
+    .mg-checkbox-label input { width: auto; }
+
     #toast {
       display: none;
       position: fixed;
@@ -140,47 +248,388 @@
 
     #toast.success { border-color: #2a6a2a; color: #6fcf6f; }
     #toast.error { border-color: #6a2a2a; color: #cf6f6f; }
+
+    #last-workout-link a {
+      color: #5a9cf5;
+      text-decoration: none;
+    }
+    #last-workout-link a:hover { text-decoration: underline; }
+
+    .ms-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .ms-wrap { position: relative; flex: 1; }
+
+    .ms-trigger {
+      width: 100%;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #666;
+      font-size: 0.82rem;
+      padding: 7px 10px;
+      text-align: left;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ms-trigger:hover { border-color: #444; color: #aaa; }
+    .ms-trigger.active { border-color: #5a9cf5; color: #8ab8ff; }
+
+    .ms-panel {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      min-width: 200px;
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 8px;
+      z-index: 200;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+
+    .ms-panel.open { display: block; }
+
+    .ms-search {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid #2a2a2a;
+      border-radius: 8px 8px 0 0;
+      color: #f0f0f0;
+      font-size: 0.85rem;
+      padding: 9px 12px;
+    }
+
+    .ms-search:focus { outline: none; }
+
+    .ms-list {
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 4px 0;
+    }
+
+    .ms-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      font-size: 0.85rem;
+      color: #bbb;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .ms-option:hover { background: #252525; }
+    .ms-option input { width: auto; accent-color: #5a9cf5; }
+    .ms-option.checked { color: #f0f0f0; }
+
+    .ms-empty { padding: 10px 12px; font-size: 0.82rem; color: #555; }
+
+    .ms-clear-btn {
+      background: none;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #555;
+      font-size: 0.8rem;
+      padding: 7px 10px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .ms-clear-btn:hover { border-color: #555; color: #aaa; }
   </style>
 </head>
 <body>
-  <h1>GymLog</h1>
+  <div class="page-header">
+    <h1>GymLog</h1>
+    <div style="display:flex;gap:8px;">
+      <a href="/workouts" class="btn-new-exercise" style="text-decoration:none;">Workouts</a>
+      <button class="btn-new-exercise" onclick="toggleCreateForm()">+ New Exercise</button>
+    </div>
+  </div>
+
+  <!-- Create exercise form (hidden by default) -->
+  <div id="create-form" class="exercise-block" style="display:none; margin-bottom:24px;">
+    <div class="exercise-header">
+      <span>Create Exercise</span>
+      <button class="btn-icon" onclick="toggleCreateForm()">✕</button>
+    </div>
+    <label>Name</label>
+    <input type="text" id="new-ex-name" placeholder="e.g. Romanian Deadlift" autocomplete="off" />
+    <label>Equipment</label>
+    <select id="new-ex-equipment">
+      <option value="">— none / unknown —</option>
+    </select>
+    <label>Muscle Groups</label>
+    <div id="mg-checkboxes" class="mg-checkboxes"></div>
+    <button class="btn-submit" style="margin-top:16px;" onclick="createExercise()">Create Exercise</button>
+  </div>
 
   <div id="exercises"></div>
 
   <button class="btn-add-exercise" onclick="addExercise()">+ Add Exercise</button>
-
   <button class="btn-submit" id="submitBtn" onclick="submitWorkout()">Log Workout</button>
+  <div id="last-workout-link" style="text-align:center;margin-top:14px;font-size:0.88rem;"></div>
 
   <div id="toast"></div>
 
   <script>
-    const MUSCLE_GROUPS = ["chest","back","shoulders","biceps","triceps","legs","abs","forearms"];
+    let allExercises = [];
+    let exerciseMap = {};
+    let muscleGroups = [];
+    let equipmentValues = [];
+    const blockFilters = {}; // blockId → { muscles: Set, equipment: Set }
+
+    function getBlockFilter(id) {
+      if (!blockFilters[id]) blockFilters[id] = { muscles: new Set(), equipment: new Set() };
+      return blockFilters[id];
+    }
+
+    const EQUIPMENT_LIST = [
+      'assisted','band','barbell','body weight','bosu ball','cable','dumbbell',
+      'elliptical machine','ez barbell','hammer','kettlebell','leverage machine',
+      'medicine ball','olympic barbell','resistance band','roller','rope',
+      'skierg machine','sled machine','smith machine','stability ball',
+      'stationary bike','stepmill machine','tire','trap bar',
+      'upper body ergometer','weighted','wheel roller'
+    ];
 
     let exerciseCount = 0;
 
+    async function init() {
+      try {
+        const [exRes, mgRes] = await Promise.all([fetch('/api/exercises'), fetch('/api/muscle-groups')]);
+        allExercises = await exRes.json();
+        muscleGroups = await mgRes.json();
+
+        exerciseMap = {};
+        for (const ex of allExercises) exerciseMap[ex.name.toLowerCase()] = ex;
+
+        equipmentValues = [...new Set(allExercises.map(e => e.equipment).filter(Boolean))].sort();
+
+        // Populate equipment select in create form
+        const eqSelect = document.getElementById('new-ex-equipment');
+        eqSelect.innerHTML = '<option value="">— none / unknown —</option>' +
+          EQUIPMENT_LIST.map(e => `<option value="${e}">${e}</option>`).join('');
+
+        // Populate muscle group checkboxes in create form
+        document.getElementById('mg-checkboxes').innerHTML = muscleGroups.map(mg =>
+          `<label class="mg-checkbox-label">
+            <input type="checkbox" name="mg" value="${mg.id}" /> ${mg.name}
+          </label>`
+        ).join('');
+
+      } catch (e) {
+        console.error('Failed to load exercises', e);
+      }
+
+      addExercise();
+    }
+
+    // ── Searchable dropdown ──────────────────────────────────────────────────
+
+    function openDropdown(id) {
+      closeAllDropdowns();
+      const dd = document.getElementById(`dd-${id}`);
+      dd.classList.add('open');
+      filterDropdown(id, document.getElementById(`name-${id}`).value);
+    }
+
+    function closeAllDropdowns() {
+      document.querySelectorAll('.ex-dropdown.open').forEach(el => el.classList.remove('open'));
+    }
+
+    // ── Multi-select filter dropdowns ────────────────────────────────────────
+
+    function toggleMs(type, id) {
+      const panel = document.getElementById(`ms-${type}-panel-${id}`);
+      const isOpen = panel.classList.contains('open');
+      closeAllMs();
+      closeAllDropdowns();
+      if (!isOpen) {
+        panel.classList.add('open');
+        renderMsOptions(type, id, '');
+        panel.querySelector('.ms-search').focus();
+      }
+    }
+
+    function closeAllMs() {
+      document.querySelectorAll('.ms-panel.open').forEach(p => p.classList.remove('open'));
+    }
+
+    function renderMsOptions(type, id, query) {
+      const f = getBlockFilter(id);
+      const selected = type === 'muscle' ? f.muscles : f.equipment;
+      const allOpts = type === 'muscle'
+        ? muscleGroups.map(mg => mg.name)
+        : equipmentValues;
+      const q = query.toLowerCase();
+      const opts = q ? allOpts.filter(o => o.includes(q)) : allOpts;
+
+      const listEl = document.getElementById(`ms-${type}-list-${id}`);
+      if (opts.length === 0) {
+        listEl.innerHTML = '<div class="ms-empty">No results</div>';
+        return;
+      }
+      listEl.innerHTML = opts.map(opt => {
+        const checked = selected.has(opt);
+        return `<label class="ms-option ${checked ? 'checked' : ''}">
+          <input type="checkbox" ${checked ? 'checked' : ''}
+            onchange="toggleMsOption('${type}',${id},'${opt.replace(/'/g,"\\'")}',this.checked)" />
+          ${opt}
+        </label>`;
+      }).join('');
+    }
+
+    function toggleMsOption(type, id, value, checked) {
+      const f = getBlockFilter(id);
+      const set = type === 'muscle' ? f.muscles : f.equipment;
+      checked ? set.add(value) : set.delete(value);
+      updateMsTrigger(type, id);
+      filterDropdown(id, document.getElementById(`name-${id}`).value);
+      // re-render list to update checked styles without closing panel
+      const searchInput = document.querySelector(`#ms-${type}-panel-${id} .ms-search`);
+      renderMsOptions(type, id, searchInput ? searchInput.value : '');
+    }
+
+    function updateMsTrigger(type, id) {
+      const f = getBlockFilter(id);
+      const set = type === 'muscle' ? f.muscles : f.equipment;
+      const btn = document.getElementById(`ms-${type}-btn-${id}`);
+      const label = type === 'muscle' ? 'Muscles' : 'Equipment';
+      if (set.size === 0) {
+        btn.textContent = `${label} ▾`;
+        btn.classList.remove('active');
+      } else if (set.size === 1) {
+        btn.textContent = `${[...set][0]} ▾`;
+        btn.classList.add('active');
+      } else {
+        btn.textContent = `${set.size} ${label.toLowerCase()} ▾`;
+        btn.classList.add('active');
+      }
+      // Show clear button if any filter is active
+      const clearBtn = document.getElementById(`ms-clear-${id}`);
+      if (clearBtn) {
+        const hasAny = f.muscles.size > 0 || f.equipment.size > 0;
+        clearBtn.style.display = hasAny ? 'block' : 'none';
+      }
+    }
+
+    function clearBlockFilters(id) {
+      const f = getBlockFilter(id);
+      f.muscles.clear();
+      f.equipment.clear();
+      updateMsTrigger('muscle', id);
+      updateMsTrigger('equip', id);
+      filterDropdown(id, document.getElementById(`name-${id}`).value);
+    }
+
+    // ── Search + filter ───────────────────────────────────────────────────────
+
+    function filterDropdown(id, query) {
+      const dd = document.getElementById(`dd-${id}`);
+      const f = getBlockFilter(id);
+      const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+
+      const matches = allExercises.filter(ex => {
+        const name = ex.name.toLowerCase();
+        if (tokens.length && !tokens.every(t => name.includes(t))) return false;
+        if (f.muscles.size && !ex.muscle_groups.some(mg => f.muscles.has(mg.name))) return false;
+        if (f.equipment.size && !f.equipment.has(ex.equipment)) return false;
+        return true;
+      }).slice(0, 60);
+
+      if (matches.length === 0) {
+        dd.innerHTML = '<div class="ex-dropdown-empty">No exercises found</div>';
+        return;
+      }
+
+      dd.innerHTML = matches.map(ex => {
+        const muscles = ex.muscle_groups.slice(0, 3).map(m => m.name).join(', ');
+        const equip = ex.equipment || '';
+        return `<div class="ex-dropdown-item" onmousedown="selectExercise(${id}, '${ex.name.replace(/'/g, "\\'")}')" >
+          ${ex.name}
+          <div class="item-meta">${[equip, muscles].filter(Boolean).join(' · ')}</div>
+        </div>`;
+      }).join('');
+    }
+
+    function selectExercise(id, name) {
+      const input = document.getElementById(`name-${id}`);
+      input.value = name;
+      const ex = exerciseMap[name.toLowerCase()];
+      input.dataset.exerciseId = ex ? ex.id : '';
+      closeAllDropdowns();
+      updateExerciseMeta(id, name);
+    }
+
+    function updateExerciseMeta(id, name) {
+      const ex = exerciseMap[name.toLowerCase()];
+      const input = document.getElementById(`name-${id}`);
+      if (!ex) input.dataset.exerciseId = '';
+      const metaDiv = document.getElementById(`ex-meta-${id}`);
+      if (ex) {
+        const equip = ex.equipment ? `<span class="equipment-tag">${ex.equipment}</span>` : '';
+        const tags = ex.muscle_groups.map(mg => `<span class="muscle-tag">${mg.name}</span>`).join('');
+        const link = `<a href="/exercise/${ex.id}" style="margin-left:auto;font-size:0.75rem;color:#555;text-decoration:none;" target="_blank">view ↗</a>`;
+        metaDiv.innerHTML = equip + tags + link;
+      } else {
+        metaDiv.innerHTML = '';
+      }
+    }
+
+    // ── Exercise blocks ──────────────────────────────────────────────────────
+
     function addExercise() {
       const id = exerciseCount++;
-      const div = document.createElement("div");
-      div.className = "exercise-block";
+      const div = document.createElement('div');
+      div.className = 'exercise-block';
       div.id = `exercise-${id}`;
       div.innerHTML = `
         <div class="exercise-header">
           <span>Exercise ${id + 1}</span>
           <button class="btn-icon" onclick="removeExercise(${id})" title="Remove">✕</button>
         </div>
-        <label>Name</label>
-        <input type="text" id="name-${id}" placeholder="e.g. bench press" autocomplete="off" />
-        <label>Muscle Group</label>
-        <select id="muscle-${id}">
-          ${MUSCLE_GROUPS.map(g => `<option value="${g}">${g}</option>`).join("")}
-        </select>
+        <label>Exercise</label>
+        <div class="ex-select-wrap">
+          <input type="text" id="name-${id}" placeholder="Search exercises..."
+                 autocomplete="off"
+                 onfocus="openDropdown(${id})"
+                 oninput="filterDropdown(${id}, this.value); updateExerciseMeta(${id}, this.value)"
+                 onblur="setTimeout(() => closeAllDropdowns(), 150)" />
+          <div class="ex-dropdown" id="dd-${id}"></div>
+        </div>
+        <div class="ms-row">
+          <div class="ms-wrap">
+            <button class="ms-trigger" id="ms-muscle-btn-${id}" onclick="toggleMs('muscle',${id})">Muscles ▾</button>
+            <div class="ms-panel" id="ms-muscle-panel-${id}">
+              <input class="ms-search" placeholder="Search muscles…" oninput="renderMsOptions('muscle',${id},this.value)" />
+              <div class="ms-list" id="ms-muscle-list-${id}"></div>
+            </div>
+          </div>
+          <div class="ms-wrap">
+            <button class="ms-trigger" id="ms-equip-btn-${id}" onclick="toggleMs('equip',${id})">Equipment ▾</button>
+            <div class="ms-panel" id="ms-equip-panel-${id}">
+              <input class="ms-search" placeholder="Search equipment…" oninput="renderMsOptions('equip',${id},this.value)" />
+              <div class="ms-list" id="ms-equip-list-${id}"></div>
+            </div>
+          </div>
+          <button class="ms-clear-btn" id="ms-clear-${id}" onclick="clearBlockFilters(${id})" style="display:none">✕</button>
+        </div>
+        <div id="ex-meta-${id}" class="muscle-tags"></div>
         <table class="sets-table">
           <thead><tr><th>Set</th><th>Reps</th><th>Weight (lbs)</th><th></th></tr></thead>
           <tbody id="sets-${id}"></tbody>
         </table>
         <button class="btn-add-set" onclick="addSet(${id})">+ Add Set</button>
       `;
-      document.getElementById("exercises").appendChild(div);
+      document.getElementById('exercises').appendChild(div);
       addSet(id);
     }
 
@@ -194,7 +643,7 @@
       if (!setCounts[exerciseId]) setCounts[exerciseId] = 0;
       const setNum = setCounts[exerciseId]++;
       const tbody = document.getElementById(`sets-${exerciseId}`);
-      const tr = document.createElement("tr");
+      const tr = document.createElement('tr');
       tr.id = `set-${exerciseId}-${setNum}`;
       tr.innerHTML = `
         <td style="color:#666;font-size:0.85rem;width:32px">${setNum + 1}</td>
@@ -209,72 +658,120 @@
       document.getElementById(`set-${id}`).remove();
     }
 
+    // ── Create exercise form ─────────────────────────────────────────────────
+
+    function toggleCreateForm() {
+      const form = document.getElementById('create-form');
+      form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+
+    async function createExercise() {
+      const name = document.getElementById('new-ex-name').value.trim();
+      if (!name) { showToast('Exercise name is required', 'error'); return; }
+
+      const muscle_group_ids = [...document.querySelectorAll('#mg-checkboxes input:checked')]
+        .map(cb => parseInt(cb.value));
+
+      try {
+        const res = await fetch('/api/exercises', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, muscle_group_ids }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || 'Failed');
+        }
+        const created = await res.json();
+
+        allExercises.push(created);
+        exerciseMap[created.name.toLowerCase()] = created;
+
+        document.getElementById('new-ex-name').value = '';
+        document.querySelectorAll('#mg-checkboxes input').forEach(cb => cb.checked = false);
+        toggleCreateForm();
+        showToast(`"${created.name}" added`, 'success');
+      } catch (e) {
+        showToast(e.message || 'Error creating exercise', 'error');
+      }
+    }
+
+    // ── Submit workout ───────────────────────────────────────────────────────
+
     async function submitWorkout() {
-      const exerciseBlocks = document.querySelectorAll(".exercise-block");
+      const exerciseBlocks = document.querySelectorAll('.exercise-block:not(#create-form)');
       const exercises = [];
 
       for (const block of exerciseBlocks) {
-        const id = block.id.replace("exercise-", "");
-        const name = document.getElementById(`name-${id}`).value.trim();
-        const muscle_group = document.getElementById(`muscle-${id}`).value;
+        const id = block.id.replace('exercise-', '');
+        const nameInput = document.getElementById(`name-${id}`);
+        const name = nameInput.value.trim();
+        const exercise_id = parseInt(nameInput.dataset.exerciseId || '');
 
-        if (!name) { showToast("Exercise name can't be empty", "error"); return; }
+        if (!name) { showToast("Exercise name can't be empty", 'error'); return; }
+        if (!exercise_id) { showToast(`Select "${name}" from the list or create it first`, 'error'); return; }
 
         const setRows = document.querySelectorAll(`#sets-${id} tr`);
         const sets = [];
 
         for (const row of setRows) {
-          const rowId = row.id.replace("set-", "");
+          const rowId = row.id.replace('set-', '');
           const reps = parseInt(document.getElementById(`reps-${rowId}`).value);
           const weightVal = document.getElementById(`weight-${rowId}`).value;
           const weight_lbs = weightVal ? parseFloat(weightVal) : null;
 
-          if (!reps || reps < 1) { showToast("Each set needs a rep count", "error"); return; }
+          if (!reps || reps < 1) { showToast('Each set needs a rep count', 'error'); return; }
           sets.push(weight_lbs !== null ? { reps, weight_lbs } : { reps });
         }
 
-        if (sets.length === 0) { showToast("Add at least one set", "error"); return; }
-        exercises.push({ name, muscle_group, sets });
+        if (sets.length === 0) { showToast('Add at least one set', 'error'); return; }
+        exercises.push({ exercise_id, sets });
       }
 
-      if (exercises.length === 0) { showToast("Add at least one exercise", "error"); return; }
+      if (exercises.length === 0) { showToast('Add at least one exercise', 'error'); return; }
 
-      const btn = document.getElementById("submitBtn");
+      const btn = document.getElementById('submitBtn');
       btn.disabled = true;
-      btn.textContent = "Logging...";
+      btn.textContent = 'Logging...';
 
       try {
-        const res = await fetch("/workouts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+        const res = await fetch('/api/workouts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ exercises }),
         });
-
         if (!res.ok) throw new Error(await res.text());
 
         const data = await res.json();
-        showToast(`Logged! ${data.exercises_logged} exercises, ${data.sets_logged} sets`, "success");
-        document.getElementById("exercises").innerHTML = "";
+        showToast(`Logged! ${data.exercises_logged} exercises, ${data.sets_logged} sets`, 'success');
+        document.getElementById('last-workout-link').innerHTML =
+          `<a href="/workout/${data.session_id}">View workout →</a>`;
+        document.getElementById('exercises').innerHTML = '';
         setCounts = {};
         exerciseCount = 0;
         addExercise();
       } catch (e) {
-        showToast("Error logging workout", "error");
+        showToast('Error logging workout', 'error');
       } finally {
         btn.disabled = false;
-        btn.textContent = "Log Workout";
+        btn.textContent = 'Log Workout';
       }
     }
 
     function showToast(msg, type) {
-      const t = document.getElementById("toast");
+      const t = document.getElementById('toast');
       t.textContent = msg;
       t.className = type;
-      t.style.display = "block";
-      setTimeout(() => t.style.display = "none", 3000);
+      t.style.display = 'block';
+      setTimeout(() => t.style.display = 'none', 3000);
     }
 
-    addExercise();
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.ex-select-wrap')) closeAllDropdowns();
+      if (!e.target.closest('.ms-wrap')) closeAllMs();
+    });
+
+    init();
   </script>
 </body>
 </html>

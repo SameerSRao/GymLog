@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Exercise — GymLog</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f0f0f;
+      color: #f0f0f0;
+      font-family: system-ui, sans-serif;
+      padding: 24px 16px 48px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .back-link {
+      display: inline-block;
+      color: #666;
+      font-size: 0.85rem;
+      text-decoration: none;
+      margin-bottom: 20px;
+    }
+    .back-link:hover { color: #aaa; }
+
+    h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 10px; }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .tag {
+      border-radius: 5px;
+      font-size: 0.78rem;
+      padding: 4px 10px;
+    }
+    .tag-equipment { background: #1c1c2e; border: 1px solid #3a3a5a; color: #8888cc; }
+    .tag-muscle    { background: #252525; border: 1px solid #3a3a3a; color: #aaa; }
+    .tag-target    { background: #1e2a1e; border: 1px solid #3a5a3a; color: #7aaa7a; }
+
+    details {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 24px;
+    }
+
+    summary {
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: #888;
+      list-style: none;
+      user-select: none;
+    }
+    summary::after { content: ' ▾'; }
+    details[open] summary::after { content: ' ▴'; }
+
+    .instructions-text {
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: #bbb;
+      line-height: 1.6;
+    }
+
+    .section-title {
+      font-size: 0.75rem;
+      color: #555;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    /* SVG Chart */
+    .chart-wrap {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .chart-title {
+      font-size: 0.78rem;
+      color: #666;
+      margin-bottom: 12px;
+    }
+
+    svg text { font-family: system-ui, sans-serif; }
+
+    /* Session cards */
+    .session-card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+    }
+
+    .session-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 10px;
+    }
+
+    .session-date { font-size: 0.9rem; color: #ccc; font-weight: 500; }
+
+    .session-stats {
+      display: flex;
+      gap: 16px;
+      font-size: 0.78rem;
+      color: #666;
+    }
+
+    .session-stats span b { color: #aaa; }
+
+    .sets-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    .sets-table th {
+      font-size: 0.72rem;
+      color: #555;
+      text-align: left;
+      padding-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .sets-table td {
+      font-size: 0.88rem;
+      color: #bbb;
+      padding: 4px 0;
+      border-top: 1px solid #222;
+    }
+
+    .sets-table td:first-child { color: #555; width: 40px; }
+
+    .empty-state {
+      text-align: center;
+      color: #444;
+      font-size: 0.9rem;
+      padding: 40px 0;
+    }
+
+    #loading { color: #555; font-size: 0.9rem; padding: 20px 0; }
+  </style>
+</head>
+<body>
+  <a class="back-link" href="/">← GymLog</a>
+
+  <div id="loading">Loading…</div>
+  <div id="content" style="display:none">
+    <h1 id="ex-name"></h1>
+    <div class="tags" id="ex-tags"></div>
+
+    <details id="instructions-section" style="display:none">
+      <summary>How to perform</summary>
+      <p class="instructions-text" id="ex-instructions"></p>
+    </details>
+
+    <p class="section-title">Progress</p>
+
+    <div id="chart-section" style="display:none" class="chart-wrap">
+      <p class="chart-title" id="chart-title"></p>
+      <svg id="chart" width="100%" viewBox="0 0 520 120" preserveAspectRatio="none"></svg>
+    </div>
+
+    <div id="sessions"></div>
+  </div>
+
+  <script>
+    const exerciseId = window.location.pathname.split('/').filter(Boolean).pop();
+
+    async function load() {
+      const [infoRes, progRes] = await Promise.all([
+        fetch(`/api/exercise/${exerciseId}/info`),
+        fetch(`/api/exercise/${exerciseId}/progression`),
+      ]);
+
+      if (!infoRes.ok) {
+        document.getElementById('loading').textContent = 'Exercise not found.';
+        return;
+      }
+
+      const info = await infoRes.json();
+      const prog = await progRes.json();
+
+      document.title = `${info.name} — GymLog`;
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('content').style.display = 'block';
+
+      // Header
+      document.getElementById('ex-name').textContent = info.name;
+
+      const tagsDiv = document.getElementById('ex-tags');
+      const parts = [];
+      if (info.equipment) parts.push(`<span class="tag tag-equipment">${info.equipment}</span>`);
+      for (const mg of info.muscle_groups) {
+        parts.push(`<span class="tag tag-muscle">${mg.name}</span>`);
+      }
+      tagsDiv.innerHTML = parts.join('');
+
+      // Instructions
+      if (info.instructions) {
+        document.getElementById('ex-instructions').textContent = info.instructions;
+        document.getElementById('instructions-section').style.display = 'block';
+      }
+
+      // Progression
+      renderSessions(prog.sessions);
+    }
+
+    function renderSessions(sessions) {
+      const container = document.getElementById('sessions');
+
+      if (sessions.length === 0) {
+        container.innerHTML = '<div class="empty-state">No workouts logged for this exercise yet.</div>';
+        return;
+      }
+
+      // Chart: best weight over sessions (skip if no weight data)
+      const weightSessions = sessions.filter(s => s.best_set_weight != null);
+      if (weightSessions.length >= 2) {
+        renderChart(weightSessions);
+      }
+
+      // Session cards (newest first for the list)
+      const sorted = [...sessions].reverse();
+      container.innerHTML = sorted.map(s => {
+        const date = new Date(s.logged_at).toLocaleDateString('en-US', {
+          month: 'short', day: 'numeric', year: 'numeric',
+        });
+        const statsHtml = [
+          s.volume != null ? `<span>Vol <b>${s.volume.toLocaleString()} lbs</b></span>` : '',
+          s.best_set_weight != null ? `<span>Best <b>${s.best_set_weight} lbs</b></span>` : '',
+        ].filter(Boolean).join('');
+
+        const setsHtml = s.sets.map(set => {
+          const weight = set.weight_lbs != null ? `${set.weight_lbs} lbs` : 'bodyweight';
+          return `<tr>
+            <td>${set.set_number}</td>
+            <td>${set.reps} reps</td>
+            <td>${weight}</td>
+          </tr>`;
+        }).join('');
+
+        return `<div class="session-card">
+          <div class="session-header">
+            <span class="session-date">${date}</span>
+            <div class="session-stats">${statsHtml}</div>
+          </div>
+          <table class="sets-table">
+            <thead><tr><th>Set</th><th>Reps</th><th>Weight</th></tr></thead>
+            <tbody>${setsHtml}</tbody>
+          </table>
+        </div>`;
+      }).join('');
+    }
+
+    function renderChart(sessions) {
+      const section = document.getElementById('chart-section');
+      const svg = document.getElementById('chart');
+      document.getElementById('chart-title').textContent = 'Best set weight per session';
+      section.style.display = 'block';
+
+      const W = 520, H = 120;
+      const padL = 40, padR = 16, padT = 12, padB = 24;
+      const plotW = W - padL - padR;
+      const plotH = H - padT - padB;
+
+      const values = sessions.map(s => s.best_set_weight);
+      const dates  = sessions.map(s => new Date(s.logged_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+      const minV = Math.min(...values);
+      const maxV = Math.max(...values);
+      const range = maxV - minV || 1;
+
+      const xOf = i => padL + (i / (sessions.length - 1)) * plotW;
+      const yOf = v => padT + plotH - ((v - minV) / range) * plotH;
+
+      // Line path
+      const pathD = values.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xOf(i)} ${yOf(v)}`).join(' ');
+
+      // Dots + x-axis labels (show first, last, and every ~3rd)
+      const dotsHtml = values.map((v, i) => {
+        const show = i === 0 || i === values.length - 1 || i % Math.max(1, Math.floor(values.length / 5)) === 0;
+        return `<circle cx="${xOf(i)}" cy="${yOf(v)}" r="3" fill="#5a9cf5" />
+          ${show ? `<text x="${xOf(i)}" y="${H - 4}" text-anchor="middle" font-size="9" fill="#555">${dates[i]}</text>` : ''}`;
+      }).join('');
+
+      // Y-axis labels
+      const yLabels = `
+        <text x="${padL - 4}" y="${padT + 4}" text-anchor="end" font-size="9" fill="#555">${maxV}</text>
+        <text x="${padL - 4}" y="${padT + plotH}" text-anchor="end" font-size="9" fill="#555">${minV}</text>
+      `;
+
+      svg.innerHTML = `
+        <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + plotH}" stroke="#2a2a2a" stroke-width="1"/>
+        <line x1="${padL}" y1="${padT + plotH}" x2="${padL + plotW}" y2="${padT + plotH}" stroke="#2a2a2a" stroke-width="1"/>
+        ${yLabels}
+        <path d="${pathD}" fill="none" stroke="#5a9cf5" stroke-width="2" stroke-linejoin="round"/>
+        ${dotsHtml}
+      `;
+    }
+
+    load();
+  </script>
+</body>
+</html>

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workouts — GymLog</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f0f0f;
+      color: #f0f0f0;
+      font-family: system-ui, sans-serif;
+      padding: 24px 16px 48px;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    .back-link {
+      display: inline-block;
+      color: #666;
+      font-size: 0.85rem;
+      text-decoration: none;
+      margin-bottom: 20px;
+    }
+    .back-link:hover { color: #aaa; }
+
+    .cal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .cal-header h2 { font-size: 1.1rem; font-weight: 600; }
+
+    .cal-nav {
+      background: none;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #888;
+      font-size: 0.9rem;
+      padding: 5px 12px;
+      cursor: pointer;
+    }
+    .cal-nav:hover { border-color: #555; color: #ccc; }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+
+    .cal-dow {
+      text-align: center;
+      font-size: 0.72rem;
+      color: #555;
+      padding-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .cal-day {
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: #555;
+      position: relative;
+    }
+
+    .cal-day.other-month { color: #2a2a2a; }
+
+    .cal-day.today { color: #f0f0f0; }
+    .cal-day.today::after {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      width: 4px; height: 4px;
+      background: #555;
+      border-radius: 50%;
+    }
+
+    .cal-day.has-workout {
+      background: #1e2a1e;
+      color: #7adf7a;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .cal-day.has-workout:hover { background: #253525; }
+    .cal-day.has-workout.today { background: #253525; color: #9fff9f; }
+
+    /* small dot count badge for multiple workouts */
+    .cal-day .multi-badge {
+      font-size: 0.55rem;
+      color: #5aaf5a;
+      line-height: 1;
+      margin-top: 1px;
+    }
+
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 20px;
+      font-size: 0.78rem;
+      color: #555;
+    }
+    .legend-dot { width: 12px; height: 12px; background: #1e2a1e; border-radius: 3px; }
+
+    /* Day picker popup */
+    .day-picker {
+      display: none;
+      position: fixed;
+      background: #1e1e1e;
+      border: 1px solid #3a3a3a;
+      border-radius: 10px;
+      padding: 8px 0;
+      z-index: 100;
+      min-width: 200px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    .day-picker.open { display: block; }
+
+    .day-picker-header {
+      font-size: 0.75rem;
+      color: #555;
+      padding: 6px 14px 10px;
+      border-bottom: 1px solid #2a2a2a;
+    }
+
+    .day-picker-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      color: #ccc;
+      text-decoration: none;
+    }
+    .day-picker-item:hover { background: #252525; }
+    .day-picker-item span { font-size: 0.75rem; color: #555; }
+
+    /* Recent list */
+    .recent-section { margin-top: 32px; }
+
+    .section-title {
+      font-size: 0.72rem;
+      color: #444;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .session-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 14px;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      text-decoration: none;
+      color: inherit;
+    }
+    .session-row:hover { border-color: #3a3a3a; background: #1e1e1e; }
+    .session-row-date { font-size: 0.9rem; color: #ccc; }
+    .session-row-meta { font-size: 0.78rem; color: #555; }
+    .session-row-arrow { color: #333; font-size: 1rem; }
+    .session-row:hover .session-row-arrow { color: #666; }
+  </style>
+</head>
+<body>
+  <a class="back-link" href="/">← GymLog</a>
+
+  <div class="cal-header">
+    <button class="cal-nav" id="prev-btn">‹</button>
+    <h2 id="cal-month-label"></h2>
+    <button class="cal-nav" id="next-btn">›</button>
+  </div>
+
+  <div class="cal-grid" id="cal-grid"></div>
+
+  <div class="legend">
+    <div class="legend-dot"></div>
+    <span>Workout logged</span>
+  </div>
+
+  <!-- Popup picker for days with multiple workouts -->
+  <div class="day-picker" id="day-picker"></div>
+
+  <div class="recent-section">
+    <p class="section-title">Recent Workouts</p>
+    <div id="recent-list"></div>
+  </div>
+
+  <script>
+    let allSessions = [];
+    let dateMap = {};  // "YYYY-MM-DD" → [session, ...]
+    let viewYear, viewMonth;
+
+    function toLocalKey(isoString) {
+      const d = new Date(isoString);
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    function buildDateMap() {
+      dateMap = {};
+      for (const s of allSessions) {
+        const key = toLocalKey(s.logged_at);
+        if (!dateMap[key]) dateMap[key] = [];
+        dateMap[key].push(s);
+      }
+    }
+
+    function handleDayClick(event, key) {
+      const sessions = dateMap[key];
+      if (!sessions || sessions.length === 0) return;
+
+      if (sessions.length === 1) {
+        window.location.href = `/workout/${sessions[0].session_id}`;
+        return;
+      }
+
+      // Multiple workouts — show picker anchored to the clicked cell
+      const picker = document.getElementById('day-picker');
+      const rect = event.currentTarget.getBoundingClientRect();
+
+      const dateLabel = new Date(sessions[0].logged_at).toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric',
+      });
+
+      picker.innerHTML = `
+        <div class="day-picker-header">${dateLabel} — ${sessions.length} workouts</div>
+        ${sessions.map((s, i) => {
+          const time = new Date(s.logged_at).toLocaleTimeString('en-US', {
+            hour: 'numeric', minute: '2-digit',
+          });
+          const exLabel = `${s.exercises_logged} exercise${s.exercises_logged !== 1 ? 's' : ''}`;
+          return `<a class="day-picker-item" href="/workout/${s.session_id}">
+            Workout ${i + 1} · ${time}
+            <span>${exLabel}</span>
+          </a>`;
+        }).join('')}
+      `;
+
+      // Position: below the cell, clamped to viewport
+      const top = rect.bottom + window.scrollY + 6;
+      let left = rect.left + window.scrollX;
+      picker.style.top = `${top}px`;
+      picker.style.left = `${left}px`;
+      picker.classList.add('open');
+
+      event.stopPropagation();
+    }
+
+    function renderCalendar(year, month) {
+      viewYear = year;
+      viewMonth = month;
+
+      const MONTHS = ['January','February','March','April','May','June',
+                      'July','August','September','October','November','December'];
+      document.getElementById('cal-month-label').textContent = `${MONTHS[month]} ${year}`;
+
+      const today = new Date();
+      const todayKey = toLocalKey(today.toISOString());
+
+      const firstDay = new Date(year, month, 1);
+      const lastDay  = new Date(year, month + 1, 0);
+      const startOffset = (firstDay.getDay() + 6) % 7;
+
+      const grid = document.getElementById('cal-grid');
+      const DOWS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+      let html = DOWS.map(d => `<div class="cal-dow">${d}</div>`).join('');
+
+      for (let i = 0; i < startOffset; i++) {
+        const d = new Date(year, month, 1 - (startOffset - i));
+        html += `<div class="cal-day other-month">${d.getDate()}</div>`;
+      }
+
+      for (let day = 1; day <= lastDay.getDate(); day++) {
+        const key = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const sessions = dateMap[key];
+        const isToday = key === todayKey;
+
+        let cls = 'cal-day';
+        if (isToday) cls += ' today';
+        if (sessions) cls += ' has-workout';
+
+        const badge = sessions && sessions.length > 1
+          ? `<span class="multi-badge">${'●'.repeat(Math.min(sessions.length, 4))}</span>`
+          : '';
+
+        const onclick = sessions ? `data-key="${key}"` : '';
+        html += `<div class="${cls}" ${onclick}>${day}${badge}</div>`;
+      }
+
+      const totalCells = startOffset + lastDay.getDate();
+      const remainder = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+      for (let i = 1; i <= remainder; i++) {
+        html += `<div class="cal-day other-month">${i}</div>`;
+      }
+
+      grid.innerHTML = html;
+
+      // Attach click handlers to workout days
+      grid.querySelectorAll('.cal-day.has-workout').forEach(el => {
+        el.addEventListener('click', e => handleDayClick(e, el.dataset.key));
+      });
+    }
+
+    function renderRecent() {
+      const list = document.getElementById('recent-list');
+      if (allSessions.length === 0) {
+        list.innerHTML = '<p style="color:#444;font-size:0.9rem;">No workouts logged yet.</p>';
+        return;
+      }
+      list.innerHTML = allSessions.slice(0, 12).map(s => {
+        const date = new Date(s.logged_at).toLocaleDateString('en-US', {
+          weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+        });
+        const time = new Date(s.logged_at).toLocaleTimeString('en-US', {
+          hour: 'numeric', minute: '2-digit',
+        });
+        const meta = `${s.exercises_logged} exercise${s.exercises_logged !== 1 ? 's' : ''} · ${time}`;
+        return `<a class="session-row" href="/workout/${s.session_id}">
+          <div>
+            <div class="session-row-date">${date}</div>
+            <div class="session-row-meta">${meta}</div>
+          </div>
+          <span class="session-row-arrow">›</span>
+        </a>`;
+      }).join('');
+    }
+
+    // Close picker when clicking outside
+    document.addEventListener('click', () => {
+      document.getElementById('day-picker').classList.remove('open');
+    });
+
+    async function init() {
+      const res = await fetch('/api/workouts');
+      allSessions = await res.json();
+      buildDateMap();
+
+      const now = new Date();
+      renderCalendar(now.getFullYear(), now.getMonth());
+      renderRecent();
+    }
+
+    document.getElementById('prev-btn').onclick = () => {
+      if (viewMonth === 0) renderCalendar(viewYear - 1, 11);
+      else renderCalendar(viewYear, viewMonth - 1);
+    };
+
+    document.getElementById('next-btn').onclick = () => {
+      if (viewMonth === 11) renderCalendar(viewYear + 1, 0);
+      else renderCalendar(viewYear, viewMonth + 1);
+    };
+
+    init();
+  </script>
+</body>
+</html>

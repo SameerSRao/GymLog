@@ -11,19 +11,16 @@ def log_workout(db: Session, workout: WorkoutRequest) -> Workout:
 
     for exercise in workout.exercises:
         for j, s in enumerate(exercise.sets):
-            row = Exercise(
+            db.add(Exercise(
                 session_id=session.id,
-                exercise_name=exercise.name,
-                muscle_group=exercise.muscle_group,
-                set_number=j+1,
+                exercise_id=exercise.exercise_id,
+                set_number=j + 1,
                 reps=s.reps,
                 weight_lbs=s.weight_lbs,
-            )
-            db.add(row)
+            ))
 
     db.commit()
     db.refresh(session)
-
     return session
 
 
@@ -46,8 +43,7 @@ def update_workout(db: Session, session_id: int, workout: WorkoutRequest) -> Opt
         for j, s in enumerate(exercise.sets):
             db.add(Exercise(
                 session_id=session.id,
-                exercise_name=exercise.name,
-                muscle_group=exercise.muscle_group,
+                exercise_id=exercise.exercise_id,
                 set_number=j + 1,
                 reps=s.reps,
                 weight_lbs=s.weight_lbs,
