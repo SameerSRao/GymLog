@@ -754,6 +754,90 @@
       if (res.ok) window.location.href = '/workouts';
     }
 
+    async function enterEditMode() {
+      await loadExerciseData();
+
+      document.getElementById('view-actions').style.display = 'none';
+      document.getElementById('edit-actions').style.display = 'flex';
+
+      document.getElementById('exercises').style.display = 'none';
+      document.getElementById('edit-exercise-container').style.display = 'block';
+      document.getElementById('edit-add-exercise-btn').style.display = 'block';
+
+      document.getElementById('edit-exercise-container').innerHTML = '';
+      exerciseCount = 0;
+      setCounts = {};
+      Object.keys(blockFilters).forEach(k => delete blockFilters[k]);
+
+      for (const ex of workout.exercises) {
+        addExercise({ exercise_id: ex.exercise_id, name: ex.name, sets: ex.sets });
+      }
+    }
+
+    function exitEditMode() {
+      document.getElementById('view-actions').style.display = 'flex';
+      document.getElementById('edit-actions').style.display = 'none';
+
+      document.getElementById('exercises').style.display = 'block';
+      document.getElementById('edit-exercise-container').style.display = 'none';
+      document.getElementById('edit-add-exercise-btn').style.display = 'none';
+
+      renderWorkout(workout);
+    }
+
+    async function saveWorkout() {
+      const exerciseBlocks = document.querySelectorAll('#edit-exercise-container .exercise-block');
+      const exercises = [];
+
+      for (const block of exerciseBlocks) {
+        const id = block.id.replace('edit-exercise-', '');
+        const nameInput = document.getElementById(`name-${id}`);
+        const name = nameInput.value.trim();
+        const exercise_id = parseInt(nameInput.dataset.exerciseId || '');
+
+        if (!name) { alert("Exercise name can't be empty"); return; }
+        if (!exercise_id) { alert(`Select "${name}" from the list first`); return; }
+
+        const setRows = document.querySelectorAll(`#sets-${id} tr`);
+        const sets = [];
+
+        for (const row of setRows) {
+          const rowId = row.id.replace('set-', '');
+          const reps = parseInt(document.getElementById(`reps-${rowId}`).value);
+          const weightVal = document.getElementById(`weight-${rowId}`).value;
+          const weight_lbs = weightVal ? parseFloat(weightVal) : null;
+
+          if (!reps || reps < 1) { alert('Each set needs a rep count'); return; }
+          sets.push(weight_lbs !== null ? { reps, weight_lbs } : { reps });
+        }
+
+        if (sets.length === 0) { alert('Add at least one set'); return; }
+        exercises.push({ exercise_id, sets });
+      }
+
+      if (exercises.length === 0) { alert('Add at least one exercise'); return; }
+
+      const saveBtn = document.querySelector('.btn-save');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+
+      try {
+        const res = await fetch(`/api/workout/${sessionId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ exercises }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        workout = await res.json();
+        exitEditMode();
+      } catch (e) {
+        alert('Error saving workout');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+      }
+    }
+
     document.addEventListener('click', e => {
       if (!e.target.closest('.ex-select-wrap')) closeAllDropdowns();
       if (!e.target.closest('.ms-wrap')) closeAllMs();
