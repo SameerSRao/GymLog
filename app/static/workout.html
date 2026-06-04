@@ -219,7 +219,7 @@
           </tr>`;
         }).join('');
 
-        const weights = ex.sets.map(s => s.weight_lbs).filter(w => w != null);
+        const weights = ex.sets.map(s => s.weight_lbs).filter(v => v != null);
         const volume = weights.length > 0
           ? ex.sets.reduce((sum, s) => sum + (s.weight_lbs != null ? s.reps * s.weight_lbs : 0), 0)
           : null;
