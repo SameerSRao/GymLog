@@ -177,6 +177,7 @@
   </div>
 
   <script>
+    let workout = null;
     const sessionId = window.location.pathname.split('/').filter(Boolean).pop();
 
     async function load() {
@@ -185,23 +186,26 @@
         document.getElementById('loading').textContent = 'Workout not found.';
         return;
       }
-      const workout = await res.json();
+      workout = await res.json();
+      renderWorkout(workout);
+    }
 
+    function renderWorkout(w) {
       document.getElementById('loading').style.display = 'none';
       document.getElementById('content').style.display = 'block';
 
-      const date = new Date(workout.logged_at);
+      const date = new Date(w.logged_at);
       document.title = `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — GymLog`;
       document.getElementById('workout-date').textContent = date.toLocaleDateString('en-US', {
         weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
       });
 
-      const totalSets = workout.exercises.reduce((n, e) => n + e.sets.length, 0);
+      const totalSets = w.exercises.reduce((n, e) => n + e.sets.length, 0);
       document.getElementById('workout-meta').textContent =
-        `${workout.exercises.length} exercise${workout.exercises.length !== 1 ? 's' : ''} · ${totalSets} sets`;
+        `${w.exercises.length} exercise${w.exercises.length !== 1 ? 's' : ''} · ${totalSets} sets`;
 
       const container = document.getElementById('exercises');
-      container.innerHTML = workout.exercises.map(ex => {
+      container.innerHTML = w.exercises.map(ex => {
         const progressionLink = ex.exercise_id
           ? `<a class="progression-link" href="/exercise/${ex.exercise_id}">View progression →</a>`
           : '';
