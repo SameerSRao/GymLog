@@ -755,6 +755,7 @@
     }
 
     async function enterEditMode() {
+      if (!workout) return;
       await loadExerciseData();
 
       document.getElementById('view-actions').style.display = 'none';
@@ -805,7 +806,7 @@
           const rowId = row.id.replace('set-', '');
           const reps = parseInt(document.getElementById(`reps-${rowId}`).value);
           const weightVal = document.getElementById(`weight-${rowId}`).value;
-          const weight_lbs = weightVal ? parseFloat(weightVal) : null;
+          const weight_lbs = weightVal !== '' ? parseFloat(weightVal) : null;
 
           if (!reps || reps < 1) { alert('Each set needs a rep count'); return; }
           sets.push(weight_lbs !== null ? { reps, weight_lbs } : { reps });
