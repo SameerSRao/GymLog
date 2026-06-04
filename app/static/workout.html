@@ -47,6 +47,44 @@
     }
     .btn-delete:hover { border-color: #6a2a2a; color: #cf6f6f; }
 
+    .btn-edit {
+      background: none;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #888;
+      font-size: 0.8rem;
+      padding: 6px 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-edit:hover { border-color: #555; color: #ccc; }
+
+    .btn-save {
+      background: #f0f0f0;
+      border: none;
+      border-radius: 6px;
+      color: #0f0f0f;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 6px 14px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-save:hover { background: #ccc; }
+    .btn-save:disabled { background: #333; color: #666; cursor: default; }
+
+    .btn-cancel-edit {
+      background: none;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #666;
+      font-size: 0.8rem;
+      padding: 6px 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-cancel-edit:hover { border-color: #555; color: #aaa; }
+
     .exercise-card {
       background: #1a1a1a;
       border: 1px solid #2a2a2a;
@@ -160,7 +198,14 @@
         <h1 id="workout-date"></h1>
         <p class="workout-meta" id="workout-meta"></p>
       </div>
-      <button class="btn-delete" onclick="confirmDelete()">Delete</button>
+      <div id="view-actions" style="display:flex;gap:8px;">
+        <button class="btn-edit" onclick="enterEditMode()">Edit</button>
+        <button class="btn-delete" onclick="confirmDelete()">Delete</button>
+      </div>
+      <div id="edit-actions" style="display:none;gap:8px;">
+        <button class="btn-cancel-edit" onclick="exitEditMode()">Cancel</button>
+        <button class="btn-save" onclick="saveWorkout()">Save</button>
+      </div>
     </div>
 
     <div id="exercises"></div>
