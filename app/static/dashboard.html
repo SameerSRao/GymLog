@@ -176,7 +176,9 @@
       let streak = 0;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      for (let i = 0; i < 365; i++) {
+      // Start from today; if today has no workout, start from yesterday so active streaks aren't broken before the day's session is logged
+      const startOffset = loggedDates.has(toLocalKey(today)) ? 0 : 1;
+      for (let i = startOffset; i < 365; i++) {
         const d = new Date(today);
         d.setDate(today.getDate() - i);
         if (loggedDates.has(toLocalKey(d))) {
@@ -201,7 +203,8 @@
           weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
         });
         const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-        const meta = `${s.exercises_logged} exercise${s.exercises_logged !== 1 ? 's' : ''} · ${timeStr}`;
+        const exCount = s.exercises_logged ?? 0;
+        const meta = `${exCount} exercise${exCount !== 1 ? 's' : ''} · ${timeStr}`;
         return `<a class="session-row" href="/workout/${s.session_id}">
           <div>
             <div class="session-row-date">${dateStr}</div>
@@ -213,18 +216,23 @@
     }
 
     async function init() {
-      const res = await fetch('/api/workouts');
-      const sessions = await res.json();
+      try {
+        const res = await fetch('/api/workouts');
+        if (!res.ok) throw new Error('Failed to load workouts');
+        const sessions = await res.json();
 
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('content').style.display = 'block';
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('content').style.display = 'block';
 
-      const { total, thisWeek, streak } = computeStats(sessions);
-      document.getElementById('stat-total').textContent = total;
-      document.getElementById('stat-week').textContent = thisWeek;
-      document.getElementById('stat-streak').textContent = streak;
+        const { total, thisWeek, streak } = computeStats(sessions);
+        document.getElementById('stat-total').textContent = total;
+        document.getElementById('stat-week').textContent = thisWeek;
+        document.getElementById('stat-streak').textContent = streak;
 
-      renderRecent(sessions);
+        renderRecent(sessions);
+      } catch (e) {
+        document.getElementById('loading').textContent = 'Failed to load workouts.';
+      }
     }
 
     init();
