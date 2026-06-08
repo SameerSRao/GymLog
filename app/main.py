@@ -27,6 +27,10 @@ def workout_page(session_id: int):
 def exercise_page(exercise_id: int):
     return FileResponse("app/static/exercise.html")
 
+@app.get("/log")
+def log_page():
+    return FileResponse("app/static/index.html")
+
 app.include_router(router, prefix="/api")
 app.include_router(exercise_router, prefix="/api")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -39,4 +43,4 @@ def health():
 
 @app.get("/")
 def index():
-    return FileResponse("app/static/index.html")
+    return FileResponse("app/static/dashboard.html")
