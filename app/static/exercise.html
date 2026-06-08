@@ -276,15 +276,30 @@
         return;
       }
 
-      // Chart: best weight over sessions (skip if no weight data)
+      // Compute all-time PR (max best_set_weight across sessions that have weight data)
       const weightSessions = sessions.filter(s => s.best_set_weight != null);
-      if (weightSessions.length >= 2) {
-        renderChart(weightSessions);
+      let prSessionId = null;
+      if (weightSessions.length > 0) {
+        const prSession = weightSessions.reduce((best, s) =>
+          s.best_set_weight > best.best_set_weight ? s : best
+        );
+        prSessionId = prSession.session_id;
+        const prDate = new Date(prSession.logged_at).toLocaleDateString('en-US', {
+          month: 'short', day: 'numeric', year: 'numeric',
+        });
+        document.getElementById('pr-value').textContent = `${prSession.best_set_weight} lbs — ${prDate}`;
+        document.getElementById('pr-banner').style.display = 'flex';
       }
 
-      // Session cards (newest first for the list)
+      // Chart: show if 2+ sessions have weight data
+      if (weightSessions.length >= 2) {
+        renderChart(weightSessions, prSessionId);
+      }
+
+      // Session cards (newest first)
       const sorted = [...sessions].reverse();
       container.innerHTML = sorted.map(s => {
+        const isPr = s.session_id === prSessionId;
         const date = new Date(s.logged_at).toLocaleDateString('en-US', {
           month: 'short', day: 'numeric', year: 'numeric',
         });
@@ -302,10 +317,13 @@
           </tr>`;
         }).join('');
 
-        return `<div class="session-card">
+        return `<div class="session-card${isPr ? ' is-pr' : ''}">
           <div class="session-header">
             <span class="session-date">${date}</span>
-            <div class="session-stats">${statsHtml}</div>
+            <div class="session-stats">
+              ${isPr ? '<span class="pr-badge">PR</span>' : ''}
+              ${statsHtml}
+            </div>
           </div>
           <table class="sets-table">
             <thead><tr><th>Set</th><th>Reps</th><th>Weight</th></tr></thead>
@@ -315,7 +333,7 @@
       }).join('');
     }
 
-    function renderChart(sessions) {
+    function renderChart(sessions, prSessionId) {
       const section = document.getElementById('chart-section');
       const svg = document.getElementById('chart');
       document.getElementById('chart-title').textContent = 'Best set weight per session';
@@ -335,17 +353,15 @@
       const xOf = i => padL + (i / (sessions.length - 1)) * plotW;
       const yOf = v => padT + plotH - ((v - minV) / range) * plotH;
 
-      // Line path
       const pathD = values.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xOf(i)} ${yOf(v)}`).join(' ');
 
-      // Dots + x-axis labels (show first, last, and every ~3rd)
       const dotsHtml = values.map((v, i) => {
+        const isPr = sessions[i].session_id === prSessionId;
         const show = i === 0 || i === values.length - 1 || i % Math.max(1, Math.floor(values.length / 5)) === 0;
-        return `<circle cx="${xOf(i)}" cy="${yOf(v)}" r="3" fill="#5a9cf5" />
+        return `<circle cx="${xOf(i)}" cy="${yOf(v)}" r="${isPr ? 5 : 3}" fill="${isPr ? '#c9a227' : '#5a9cf5'}" />
           ${show ? `<text x="${xOf(i)}" y="${H - 4}" text-anchor="middle" font-size="9" fill="#555">${dates[i]}</text>` : ''}`;
       }).join('');
 
-      // Y-axis labels
       const yLabels = `
         <text x="${padL - 4}" y="${padT + 4}" text-anchor="end" font-size="9" fill="#555">${maxV}</text>
         <text x="${padL - 4}" y="${padT + plotH}" text-anchor="end" font-size="9" fill="#555">${minV}</text>
