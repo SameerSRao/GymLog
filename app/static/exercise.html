@@ -334,6 +334,7 @@
     }
 
     function renderChart(sessions, prSessionId) {
+      if (sessions.length < 2) return;
       const section = document.getElementById('chart-section');
       const svg = document.getElementById('chart');
       document.getElementById('chart-title').textContent = 'Best set weight per session';
