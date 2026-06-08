@@ -239,6 +239,10 @@
         document.getElementById('loading').textContent = 'Exercise not found.';
         return;
       }
+      if (!progRes.ok) {
+        document.getElementById('loading').textContent = 'Failed to load progression data.';
+        return;
+      }
 
       const info = await infoRes.json();
       const prog = await progRes.json();
