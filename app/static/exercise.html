@@ -248,6 +248,9 @@
   <script>
     const exerciseId = window.location.pathname.split('/').filter(Boolean).pop();
 
+    let currentView = 'weight';
+    let chartData = {};
+
     async function load() {
       const [infoRes, progRes] = await Promise.all([
         fetch(`/api/exercise/${exerciseId}/info`),
@@ -314,9 +317,34 @@
         document.getElementById('pr-banner').style.display = 'flex';
       }
 
-      // Chart: show if 2+ sessions have weight data
-      if (weightSessions.length >= 2) {
-        renderChart(weightSessions, prSessionId);
+      // Build chart datasets
+      const dateLabel = s => new Date(s.logged_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+      const weightPoints = weightSessions.map(s => ({ value: s.best_set_weight, date: dateLabel(s) }));
+      const prIdx = prSessionId != null
+        ? weightSessions.findIndex(s => s.session_id === prSessionId)
+        : undefined;
+
+      const volumeSessions = sessions.filter(s => s.volume != null);
+      const volumePoints = volumeSessions.map(s => ({ value: s.volume, date: dateLabel(s) }));
+
+      const repsPoints = sessions.map(s => ({
+        value: s.sets.reduce((sum, set) => sum + set.reps, 0),
+        date: dateLabel(s),
+      }));
+
+      chartData = {
+        weight: { points: weightPoints, title: 'Best set weight per session (lbs)', highlightIdx: prIdx },
+        volume: { points: volumePoints, title: 'Volume load per session (lbs)',     highlightIdx: undefined },
+        reps:   { points: repsPoints,   title: 'Total reps per session',            highlightIdx: undefined },
+      };
+
+      const availableViews = ['weight', 'volume', 'reps'].filter(v => chartData[v].points.length >= 2);
+
+      if (availableViews.length > 0) {
+        currentView = availableViews.includes('weight') ? 'weight' : availableViews[0];
+        buildTabs(availableViews);
+        showChart(currentView);
       }
 
       // Session cards (newest first)
@@ -356,11 +384,11 @@
       }).join('');
     }
 
-    function renderChart(sessions, prSessionId) {
-      if (sessions.length < 2) return;
+    function renderChart(points, title, highlightIdx) {
+      if (points.length < 2) return;
       const section = document.getElementById('chart-section');
       const svg = document.getElementById('chart');
-      document.getElementById('chart-title').textContent = 'Best set weight per session';
+      document.getElementById('chart-title').textContent = title;
       section.style.display = 'block';
 
       const W = 520, H = 120;
@@ -368,19 +396,19 @@
       const plotW = W - padL - padR;
       const plotH = H - padT - padB;
 
-      const values = sessions.map(s => s.best_set_weight);
-      const dates  = sessions.map(s => new Date(s.logged_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+      const values = points.map(p => p.value);
+      const dates  = points.map(p => p.date);
       const minV = Math.min(...values);
       const maxV = Math.max(...values);
       const range = maxV - minV || 1;
 
-      const xOf = i => padL + (i / (sessions.length - 1)) * plotW;
+      const xOf = i => padL + (i / (points.length - 1)) * plotW;
       const yOf = v => padT + plotH - ((v - minV) / range) * plotH;
 
       const pathD = values.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xOf(i)} ${yOf(v)}`).join(' ');
 
       const dotsHtml = values.map((v, i) => {
-        const isPr = sessions[i].session_id === prSessionId;
+        const isPr = i === highlightIdx;
         const show = i === 0 || i === values.length - 1 || i % Math.max(1, Math.floor(values.length / 5)) === 0;
         return `<circle cx="${xOf(i)}" cy="${yOf(v)}" r="${isPr ? 5 : 3}" fill="${isPr ? '#c9a227' : '#5a9cf5'}" />
           ${show ? `<text x="${xOf(i)}" y="${H - 4}" text-anchor="middle" font-size="9" fill="#555">${dates[i]}</text>` : ''}`;
@@ -398,6 +426,28 @@
         <path d="${pathD}" fill="none" stroke="#5a9cf5" stroke-width="2" stroke-linejoin="round"/>
         ${dotsHtml}
       `;
+    }
+
+    function showChart(view) {
+      currentView = view;
+      document.querySelectorAll('.chart-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === view);
+      });
+      const d = chartData[view];
+      if (!d || d.points.length < 2) return;
+      renderChart(d.points, d.title, d.highlightIdx);
+    }
+
+    function buildTabs(views) {
+      const tabsEl = document.getElementById('chart-tabs');
+      if (views.length <= 1) {
+        tabsEl.innerHTML = '';
+        return;
+      }
+      const labels = { weight: 'Weight', volume: 'Volume', reps: 'Reps' };
+      tabsEl.innerHTML = views.map(v =>
+        `<button class="chart-tab${v === currentView ? ' active' : ''}" data-view="${v}" onclick="showChart('${v}')">${labels[v]}</button>`
+      ).join('');
     }
 
     load();
