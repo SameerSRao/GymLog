@@ -38,7 +38,7 @@ def _build_workout_detailed(session, db: Session) -> WorkoutDetailed:
         for exercise_id, set_list in grouped.items()
     ]
 
-    return WorkoutDetailed(session_id=session.id, logged_at=session.logged_at, exercises=exercises)
+    return WorkoutDetailed(session_id=session.id, logged_at=session.logged_at, notes=session.raw_input, exercises=exercises)
 
 
 @router.post("/workouts", response_model=WorkoutResponse)
