@@ -181,6 +181,21 @@
 
     .btn-add-exercise:hover { border-color: #555; color: #aaa; }
 
+    .notes-textarea {
+      width: 100%;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #f0f0f0;
+      font-size: 0.9rem;
+      font-family: system-ui, sans-serif;
+      padding: 10px 12px;
+      resize: vertical;
+      margin-bottom: 16px;
+      display: block;
+    }
+    .notes-textarea:focus { outline: none; border-color: #555; }
+
     .btn-submit {
       background: #f0f0f0;
       color: #0f0f0f;
@@ -384,6 +399,7 @@
   <div id="exercises"></div>
 
   <button class="btn-add-exercise" onclick="addExercise()">+ Add Exercise</button>
+  <textarea id="workout-notes-input" class="notes-textarea" placeholder="Notes (optional)" rows="3"></textarea>
   <button class="btn-submit" id="submitBtn" onclick="submitWorkout()">Log Workout</button>
   <div id="last-workout-link" style="text-align:center;margin-top:14px;font-size:0.88rem;"></div>
 
@@ -740,6 +756,7 @@
 
       if (exercises.length === 0) { showToast('Add at least one exercise', 'error'); return; }
 
+      const notes = document.getElementById('workout-notes-input').value.trim() || null;
       const btn = document.getElementById('submitBtn');
       btn.disabled = true;
       btn.textContent = 'Logging...';
@@ -748,7 +765,7 @@
         const res = await fetch('/api/workouts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ exercises }),
+          body: JSON.stringify({ exercises, notes }),
         });
         if (!res.ok) throw new Error(await res.text());
 
@@ -757,6 +774,7 @@
         document.getElementById('last-workout-link').innerHTML =
           `<a href="/workout/${data.session_id}">View workout →</a>`;
         document.getElementById('exercises').innerHTML = '';
+        document.getElementById('workout-notes-input').value = '';
         setCounts = {};
         exerciseCount = 0;
         addExercise();
