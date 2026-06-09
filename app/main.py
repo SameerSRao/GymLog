@@ -21,6 +21,10 @@ NO_CACHE = {"Cache-Control": "no-cache"}
 def workouts_page():
     return FileResponse("app/static/workouts.html", headers=NO_CACHE)
 
+@app.get("/exercises")
+def exercises_page():
+    return FileResponse("app/static/exercises.html", headers=NO_CACHE)
+
 @app.get("/workout/{session_id}")
 def workout_page(session_id: int):
     return FileResponse("app/static/workout.html", headers=NO_CACHE)
