@@ -35,6 +35,23 @@
     h1 { font-size: 1.5rem; font-weight: 700; }
     .workout-meta { font-size: 0.82rem; color: #555; margin-top: 4px; }
 
+    .workout-notes { font-size: 0.82rem; color: #888; margin-top: 6px; line-height: 1.5; white-space: pre-wrap; }
+
+    .notes-textarea {
+      width: 100%;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #f0f0f0;
+      font-size: 0.9rem;
+      font-family: system-ui, sans-serif;
+      padding: 10px 12px;
+      resize: vertical;
+      margin-top: 16px;
+      display: block;
+    }
+    .notes-textarea:focus { outline: none; border-color: #555; }
+
     .btn-delete {
       background: none;
       border: 1px solid #3a2020;
@@ -395,6 +412,7 @@
       <div>
         <h1 id="workout-date"></h1>
         <p class="workout-meta" id="workout-meta"></p>
+        <p class="workout-notes" id="workout-notes" style="display:none"></p>
       </div>
       <div id="view-actions" style="display:flex;gap:8px;">
         <button class="btn-edit" onclick="enterEditMode()">Edit</button>
@@ -409,6 +427,7 @@
     <div id="exercises"></div>
     <div id="edit-exercise-container" style="display:none"></div>
     <button id="edit-add-exercise-btn" class="btn-add-exercise" onclick="addExercise()" style="display:none">+ Add Exercise</button>
+    <textarea id="edit-notes" class="notes-textarea" placeholder="Notes (optional)" rows="3" style="display:none"></textarea>
   </div>
 
   <div class="confirm-overlay" id="confirm-overlay">
@@ -695,6 +714,14 @@
       document.getElementById('workout-meta').textContent =
         `${w.exercises.length} exercise${w.exercises.length !== 1 ? 's' : ''} · ${totalSets} sets`;
 
+      const notesEl = document.getElementById('workout-notes');
+      if (w.notes) {
+        notesEl.textContent = w.notes;
+        notesEl.style.display = 'block';
+      } else {
+        notesEl.style.display = 'none';
+      }
+
       const container = document.getElementById('exercises');
       container.innerHTML = w.exercises.map(ex => {
         const progressionLink = ex.exercise_id
@@ -773,6 +800,10 @@
       for (const ex of workout.exercises) {
         addExercise({ exercise_id: ex.exercise_id, name: ex.name, sets: ex.sets });
       }
+
+      const editNotes = document.getElementById('edit-notes');
+      editNotes.value = workout.notes || '';
+      editNotes.style.display = 'block';
     }
 
     function exitEditMode() {
@@ -782,6 +813,7 @@
       document.getElementById('exercises').style.display = 'block';
       document.getElementById('edit-exercise-container').style.display = 'none';
       document.getElementById('edit-add-exercise-btn').style.display = 'none';
+      document.getElementById('edit-notes').style.display = 'none';
 
       renderWorkout(workout);
     }
@@ -818,6 +850,7 @@
 
       if (exercises.length === 0) { alert('Add at least one exercise'); return; }
 
+      const notes = document.getElementById('edit-notes').value.trim() || null;
       const saveBtn = document.querySelector('.btn-save');
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving…';
@@ -826,7 +859,7 @@
         const res = await fetch(`/api/workout/${sessionId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ exercises }),
+          body: JSON.stringify({ exercises, notes }),
         });
         if (!res.ok) throw new Error(await res.text());
         workout = await res.json();
