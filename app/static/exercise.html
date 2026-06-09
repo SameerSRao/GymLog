@@ -85,6 +85,24 @@
       margin-bottom: 24px;
     }
 
+    .chart-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .chart-tab {
+      background: none;
+      border: 1px solid #333;
+      border-radius: 20px;
+      color: #555;
+      font-size: 0.75rem;
+      padding: 4px 12px;
+      cursor: pointer;
+    }
+    .chart-tab:hover { border-color: #444; color: #aaa; }
+    .chart-tab.active { border-color: #5a9cf5; color: #5a9cf5; }
+
     .chart-title {
       font-size: 0.78rem;
       color: #666;
@@ -219,6 +237,7 @@
     <p class="section-title">Progress</p>
 
     <div id="chart-section" style="display:none" class="chart-wrap">
+      <div class="chart-tabs" id="chart-tabs"></div>
       <p class="chart-title" id="chart-title"></p>
       <svg id="chart" width="100%" viewBox="0 0 520 120" preserveAspectRatio="none"></svg>
     </div>
