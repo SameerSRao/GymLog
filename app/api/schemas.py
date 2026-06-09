@@ -35,6 +35,7 @@ class ExerciseLogRequest(BaseModel):
 
 class WorkoutRequest(BaseModel):
     exercises: list[ExerciseLogRequest]
+    notes: Optional[str] = None
 
 
 # Used in workout detail responses
@@ -55,6 +56,7 @@ class WorkoutResponse(BaseModel):
 class WorkoutDetailed(BaseModel):
     session_id: int
     logged_at: datetime
+    notes: Optional[str] = None
     exercises: list[ExerciseSchema]
 
 

@@ -5,7 +5,7 @@ from typing import Optional
 
 
 def log_workout(db: Session, workout: WorkoutRequest) -> Workout:
-    session = Workout()
+    session = Workout(raw_input=workout.notes)
     db.add(session)
     db.flush()
 
@@ -37,6 +37,7 @@ def update_workout(db: Session, session_id: int, workout: WorkoutRequest) -> Opt
     if not session:
         return None
 
+    session.raw_input = workout.notes
     db.query(Exercise).filter(Exercise.session_id == session_id).delete()
 
     for exercise in workout.exercises:
