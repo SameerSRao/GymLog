@@ -1,90 +1,41 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Exercise — GymLog</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+# Volume Trend Charts Implementation Plan
 
-    body {
-      background: #0f0f0f;
-      color: #f0f0f0;
-      font-family: system-ui, sans-serif;
-      padding: 24px 16px 48px;
-      max-width: 600px;
-      margin: 0 auto;
-    }
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-    .back-link {
-      display: inline-block;
-      color: #666;
-      font-size: 0.85rem;
-      text-decoration: none;
-      margin-bottom: 20px;
-    }
-    .back-link:hover { color: #aaa; }
+**Goal:** Add Volume Load and Reps chart views to the exercise progression page with a pill tab row to switch between Weight, Volume, and Reps charts.
 
-    h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 10px; }
+**Architecture:** Frontend-only change to `app/static/exercise.html`. All data is in the existing API response. `renderChart` is generalized to accept `(points, title, highlightIdx)` instead of a sessions array. `renderSessions` computes three datasets on load and shows only tabs with ≥2 data points.
 
-    .tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 16px;
-    }
+**Tech Stack:** Vanilla JS, HTML, CSS (single file).
 
-    .tag {
-      border-radius: 5px;
+---
+
+## File Structure
+
+| File | Change |
+|------|--------|
+| `app/static/exercise.html` | Add tab CSS; add `#chart-tabs` HTML; generalize `renderChart`; add `showChart`, `buildTabs`; update `renderSessions` |
+
+---
+
+### Task 1: Add chart tab CSS and HTML
+
+**Files:**
+- Modify: `app/static/exercise.html`
+
+- [ ] **Step 1: Add `.chart-tabs` and `.chart-tab` CSS**
+
+In `app/static/exercise.html`, find the `<style>` block. Find:
+```css
+    .chart-title {
       font-size: 0.78rem;
-      padding: 4px 10px;
+      color: #666;
+      margin-bottom: 12px;
     }
-    .tag-equipment { background: #1c1c2e; border: 1px solid #3a3a5a; color: #8888cc; }
-    .tag-muscle    { background: #252525; border: 1px solid #3a3a3a; color: #aaa; }
-    .tag-target    { background: #1e2a1e; border: 1px solid #3a5a3a; color: #7aaa7a; }
+```
 
-    details {
-      background: #1a1a1a;
-      border: 1px solid #2a2a2a;
-      border-radius: 8px;
-      padding: 12px 16px;
-      margin-bottom: 24px;
-    }
-
-    summary {
-      cursor: pointer;
-      font-size: 0.85rem;
-      color: #888;
-      list-style: none;
-      user-select: none;
-    }
-    summary::after { content: ' ▾'; }
-    details[open] summary::after { content: ' ▴'; }
-
-    .instructions-text {
-      margin-top: 12px;
-      font-size: 0.9rem;
-      color: #bbb;
-      line-height: 1.6;
-    }
-
-    .section-title {
-      font-size: 0.75rem;
-      color: #555;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      margin-bottom: 16px;
-    }
-
-    /* SVG Chart */
-    .chart-wrap {
-      background: #1a1a1a;
-      border: 1px solid #2a2a2a;
-      border-radius: 10px;
-      padding: 16px;
-      margin-bottom: 24px;
-    }
-
+Replace with:
+```css
     .chart-tabs {
       display: flex;
       gap: 6px;
@@ -108,192 +59,63 @@
       color: #666;
       margin-bottom: 12px;
     }
+```
 
-    svg text { font-family: system-ui, sans-serif; }
+- [ ] **Step 2: Add `#chart-tabs` div to the chart section HTML**
 
-    /* Session cards */
-    .session-card {
-      background: #1a1a1a;
-      border: 1px solid #2a2a2a;
-      border-radius: 10px;
-      padding: 14px 16px;
-      margin-bottom: 12px;
-    }
-
-    .session-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-bottom: 10px;
-    }
-
-    .session-date { font-size: 0.9rem; color: #ccc; font-weight: 500; }
-
-    .session-stats {
-      display: flex;
-      gap: 16px;
-      font-size: 0.78rem;
-      color: #666;
-    }
-
-    .session-stats span b { color: #aaa; }
-
-    .sets-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-
-    .sets-table th {
-      font-size: 0.72rem;
-      color: #555;
-      text-align: left;
-      padding-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .sets-table td {
-      font-size: 0.88rem;
-      color: #bbb;
-      padding: 4px 0;
-      border-top: 1px solid #222;
-    }
-
-    .sets-table td:first-child { color: #555; width: 40px; }
-
-    .empty-state {
-      text-align: center;
-      color: #444;
-      font-size: 0.9rem;
-      padding: 40px 0;
-    }
-
-    .pr-banner {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: #1a1500;
-      border: 1px solid #4a3a00;
-      border-radius: 8px;
-      padding: 12px 16px;
-      margin-bottom: 24px;
-    }
-
-    .pr-label {
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: #c9a227;
-      background: #2a1f00;
-      border: 1px solid #4a3a00;
-      border-radius: 4px;
-      padding: 2px 8px;
-    }
-
-    .pr-value {
-      font-size: 0.95rem;
-      color: #e8c84a;
-    }
-
-    .session-card.is-pr {
-      border-color: #4a3a00;
-      background: #1a1500;
-    }
-
-    .pr-badge {
-      font-size: 0.68rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #c9a227;
-      border: 1px solid #4a3a00;
-      border-radius: 4px;
-      padding: 2px 7px;
-    }
-
-    #loading { color: #555; font-size: 0.9rem; padding: 20px 0; }
-  </style>
-</head>
-<body>
-  <a class="back-link" href="/">← GymLog</a>
-
-  <div id="loading">Loading…</div>
-  <div id="content" style="display:none">
-    <h1 id="ex-name"></h1>
-    <div class="tags" id="ex-tags"></div>
-
-    <details id="instructions-section" style="display:none">
-      <summary>How to perform</summary>
-      <p class="instructions-text" id="ex-instructions"></p>
-    </details>
-
-    <div id="pr-banner" style="display:none" class="pr-banner">
-      <span class="pr-label">PR</span>
-      <span class="pr-value" id="pr-value"></span>
+Find:
+```html
+    <div id="chart-section" style="display:none" class="chart-wrap">
+      <p class="chart-title" id="chart-title"></p>
+      <svg id="chart" width="100%" viewBox="0 0 520 120" preserveAspectRatio="none"></svg>
     </div>
+```
 
-    <p class="section-title">Progress</p>
-
+Replace with:
+```html
     <div id="chart-section" style="display:none" class="chart-wrap">
       <div class="chart-tabs" id="chart-tabs"></div>
       <p class="chart-title" id="chart-title"></p>
       <svg id="chart" width="100%" viewBox="0 0 520 120" preserveAspectRatio="none"></svg>
     </div>
+```
 
-    <div id="sessions"></div>
-  </div>
+- [ ] **Step 3: Commit**
 
-  <script>
+```bash
+git add app/static/exercise.html
+git commit -m "feat: add chart tab HTML and CSS to exercise progression page"
+```
+
+---
+
+### Task 2: Generalize renderChart and wire up tab switching
+
+**Files:**
+- Modify: `app/static/exercise.html`
+
+This task replaces the entire `<script>` block's chart-related code. Read the current script carefully — the session card rendering loop must remain unchanged.
+
+- [ ] **Step 1: Add module-level state variables**
+
+In `app/static/exercise.html`, find the `<script>` tag opening and the first line:
+```js
+    const exerciseId = window.location.pathname.split('/').filter(Boolean).pop();
+```
+
+Replace with:
+```js
     const exerciseId = window.location.pathname.split('/').filter(Boolean).pop();
 
     let currentView = 'weight';
     let chartData = {};
+```
 
-    async function load() {
-      const [infoRes, progRes] = await Promise.all([
-        fetch(`/api/exercise/${exerciseId}/info`),
-        fetch(`/api/exercise/${exerciseId}/progression`),
-      ]);
+- [ ] **Step 2: Replace `renderSessions` with the multi-chart version**
 
-      if (!infoRes.ok) {
-        document.getElementById('loading').textContent = 'Exercise not found.';
-        return;
-      }
-      if (!progRes.ok) {
-        document.getElementById('loading').textContent = 'Failed to load progression data.';
-        return;
-      }
+Find and replace the entire `renderSessions` function:
 
-      const info = await infoRes.json();
-      const prog = await progRes.json();
-
-      document.title = `${info.name} — GymLog`;
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('content').style.display = 'block';
-
-      // Header
-      document.getElementById('ex-name').textContent = info.name;
-
-      const tagsDiv = document.getElementById('ex-tags');
-      const parts = [];
-      if (info.equipment) parts.push(`<span class="tag tag-equipment">${info.equipment}</span>`);
-      for (const mg of info.muscle_groups) {
-        parts.push(`<span class="tag tag-muscle">${mg.name}</span>`);
-      }
-      tagsDiv.innerHTML = parts.join('');
-
-      // Instructions
-      if (info.instructions) {
-        document.getElementById('ex-instructions').textContent = info.instructions;
-        document.getElementById('instructions-section').style.display = 'block';
-      }
-
-      // Progression
-      renderSessions(prog.sessions);
-    }
-
+```js
     function renderSessions(sessions) {
       const container = document.getElementById('sessions');
 
@@ -383,7 +205,13 @@
         </div>`;
       }).join('');
     }
+```
 
+- [ ] **Step 3: Replace `renderChart` with the generalized version**
+
+Find and replace the entire `renderChart` function:
+
+```js
     function renderChart(points, title, highlightIdx) {
       if (points.length < 2) return;
       const section = document.getElementById('chart-section');
@@ -427,7 +255,13 @@
         ${dotsHtml}
       `;
     }
+```
 
+- [ ] **Step 4: Add `showChart` and `buildTabs` functions**
+
+Add these two functions immediately after `renderChart` (before `load()`):
+
+```js
     function showChart(view) {
       currentView = view;
       document.querySelectorAll('.chart-tab').forEach(btn => {
@@ -449,8 +283,78 @@
         `<button class="chart-tab${v === currentView ? ' active' : ''}" data-view="${v}" onclick="showChart('${v}')">${labels[v]}</button>`
       ).join('');
     }
+```
 
-    load();
-  </script>
-</body>
-</html>
+- [ ] **Step 5: Commit**
+
+```bash
+git add app/static/exercise.html
+git commit -m "feat: add volume and reps chart tabs to exercise progression page"
+```
+
+---
+
+### Task 3: End-to-end verification
+
+**Files:** none (manual verification)
+
+- [ ] **Step 1: Start the app**
+
+```bash
+docker compose up --build
+```
+
+- [ ] **Step 2: Log at least 2 workouts for a weighted exercise**
+
+Navigate to `http://localhost:8000/log`. Log the same exercise (e.g. Barbell Bench Press) at least twice, with different weights. For example:
+- Session 1: 3 sets × 5 reps @ 135 lbs
+- Session 2: 3 sets × 5 reps @ 185 lbs
+
+- [ ] **Step 3: Open the exercise progression page**
+
+Navigate to `/exercise/{id}` for that exercise.
+
+Confirm:
+- Three pill tabs appear: **Weight**, **Volume**, **Reps**
+- Weight tab is active by default (blue border and text)
+- Chart shows best set weight per session with the PR dot in gold
+- PR banner still shows correctly above the chart section
+
+- [ ] **Step 4: Switch to Volume tab**
+
+Click **Volume**.
+
+Confirm:
+- Volume tab becomes active (blue)
+- Chart title changes to `"Volume load per session (lbs)"`
+- Chart plots volume values (e.g. session 1: 3×5×135 = 2025 lbs, session 2: 3×5×185 = 2775 lbs)
+- No gold dot (no PR highlight on volume view)
+
+- [ ] **Step 5: Switch to Reps tab**
+
+Click **Reps**.
+
+Confirm:
+- Reps tab becomes active (blue)
+- Chart title changes to `"Total reps per session"`
+- Chart plots total reps per session (e.g. 15 reps for both sessions = flat line)
+- No gold dot
+
+- [ ] **Step 6: Verify bodyweight exercise shows only Reps tab**
+
+Log a bodyweight exercise (e.g. Pull Up, no weight entered) for 2+ sessions. Navigate to its progression page.
+
+Confirm:
+- Only the **Reps** tab appears (Weight and Volume have no data — no tabs shown for them, and tab row is hidden when ≤1 tab qualifies)
+- Actually: since only 1 view qualifies (Reps), `buildTabs` gets `views.length === 1` and renders NO tab row (`tabsEl.innerHTML = ''`). The chart still renders for Reps.
+- Chart shows total reps per session
+- No PR banner (no weight data)
+
+- [ ] **Step 7: Verify single-session exercise shows no chart and no tabs**
+
+Log one session for a new exercise. Navigate to its progression page.
+
+Confirm:
+- No chart section visible (requires ≥2 sessions per metric)
+- No tab row visible
+- PR banner shows if the exercise has weight data
