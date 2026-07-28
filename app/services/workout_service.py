@@ -5,7 +5,7 @@ from typing import Optional
 
 
 def log_workout(db: Session, workout: WorkoutRequest) -> Workout:
-    session = Workout(raw_input=workout.notes)
+    session = Workout(raw_input=workout.notes, logged_at=workout.logged_at) if workout.logged_at else Workout(raw_input=workout.notes)
     db.add(session)
     db.flush()
 
