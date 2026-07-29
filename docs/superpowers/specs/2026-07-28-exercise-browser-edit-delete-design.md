@@ -45,7 +45,7 @@ Clicking **Edit** replaces the row's innerHTML with an inline form (full row swa
   - 409 (name conflict) → shows inline error below the form: "An exercise with that name already exists"
   - Other errors → generic inline error
 
-Only one row can be in edit mode at a time. Opening a second row's edit form saves or discards the first (simplest: disallow — clicking Edit while another is open is a no-op, or close-and-open).
+Only one row can be in edit mode at a time. Clicking Edit while another row is already open closes the open row (discarding unsaved changes) and opens the new one.
 
 ## Delete Flow
 
