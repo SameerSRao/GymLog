@@ -110,6 +110,8 @@ GymLog/
 | POST | `/api/exercises` | Create a custom exercise |
 | GET | `/api/muscle-groups` | List all muscle groups |
 | GET | `/api/exercise/{id}/info` | Single exercise detail |
+| PUT | `/api/exercise/{id}` | Update an exercise — partial or full; 409 on name conflict |
+| DELETE | `/api/exercise/{id}` | Delete an exercise — 409 if referenced in exercise_sets |
 | GET | `/api/exercise/{id}/progression` | Workout history grouped by session |
 
 #### Workouts
