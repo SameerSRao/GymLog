@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -9,8 +10,9 @@ from app.db.seed import seed_exercises
 
 Base.metadata.create_all(bind=engine)
 
-with SessionLocal() as db:
-    seed_exercises(db)
+if not os.getenv("TESTING"):
+    with SessionLocal() as db:
+        seed_exercises(db)
 
 app = FastAPI()
 
