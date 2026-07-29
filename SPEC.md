@@ -96,9 +96,11 @@ GymLog/
 ### HTML pages (served by FastAPI, no prefix)
 | Route | Page |
 |-------|------|
-| `GET /` | Log workout |
+| `GET /` | Dashboard |
+| `GET /log` | Log workout |
 | `GET /workouts` | Calendar + recent list |
 | `GET /workout/{id}` | Workout detail |
+| `GET /exercises` | Exercise browser — search, filter, edit, delete |
 | `GET /exercise/{id}` | Exercise info + progression |
 
 ### JSON API (all under `/api`)
@@ -237,7 +239,6 @@ Seeding is idempotent — skipped if exercises already exist.
 | Edit workout UI | PUT endpoint exists, no frontend |
 | Personal records | No PR detection or highlighting |
 | Workout notes | No free-text notes per session |
-| Exercise browser | No page to browse/search all exercises outside of logging |
 | Volume / rep trend charts | Progression page only charts best weight |
 | Auth / multi-user | Single user only |
 | Natural language input | Was in original spec, deprioritized |

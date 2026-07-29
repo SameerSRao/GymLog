@@ -168,7 +168,158 @@
       padding: 40px 0;
     }
 
+    .ex-row-main {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .ex-row-link {
+      flex: 1;
+      text-decoration: none;
+      color: inherit;
+      min-width: 0;
+    }
+
+    .ex-row-actions {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .btn-edit {
+      background: none;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #888;
+      font-size: 0.78rem;
+      padding: 5px 10px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-edit:hover { border-color: #555; color: #ccc; }
+
+    .btn-delete-row {
+      background: none;
+      border: 1px solid #3a2020;
+      border-radius: 6px;
+      color: #8a4a4a;
+      font-size: 0.78rem;
+      padding: 5px 10px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-delete-row:hover { border-color: #6a2a2a; color: #cf6f6f; }
+
+    .confirm-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+    .confirm-overlay.open { display: flex; }
+
+    .confirm-box {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 24px;
+      width: 300px;
+      text-align: center;
+    }
+    .confirm-box p { font-size: 0.9rem; color: #aaa; margin-bottom: 20px; line-height: 1.5; }
+    .confirm-actions { display: flex; gap: 10px; }
+    .confirm-actions button { flex: 1; padding: 10px; border-radius: 7px; cursor: pointer; font-size: 0.9rem; }
+    .btn-cancel { background: none; border: 1px solid #333; color: #888; }
+    .btn-cancel:hover { border-color: #555; color: #ccc; }
+    .btn-confirm-delete { background: #3a1a1a; border: 1px solid #6a2a2a; color: #cf6f6f; }
+    .btn-confirm-delete:hover { background: #4a2020; }
+
     #loading { color: #555; font-size: 0.9rem; padding: 20px 0; }
+
+    .ex-row--editing {
+      background: #1e1e1e;
+      border-color: #3a3a3a;
+      padding: 14px;
+    }
+
+    .edit-label {
+      display: block;
+      font-size: 0.78rem;
+      color: #666;
+      margin: 12px 0 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .edit-label:first-child { margin-top: 0; }
+
+    .edit-input {
+      width: 100%;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #f0f0f0;
+      font-size: 0.95rem;
+      padding: 9px 12px;
+    }
+    .edit-input:focus { outline: none; border-color: #555; }
+
+    select.edit-input option { background: #1a1a1a; }
+
+    .edit-textarea {
+      width: 100%;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #f0f0f0;
+      font-size: 0.88rem;
+      font-family: system-ui, sans-serif;
+      padding: 9px 12px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+    .edit-textarea:focus { outline: none; border-color: #555; }
+
+    .edit-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .btn-save {
+      background: #f0f0f0;
+      border: none;
+      border-radius: 6px;
+      color: #0f0f0f;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 7px 16px;
+      cursor: pointer;
+    }
+    .btn-save:hover { background: #ccc; }
+    .btn-save:disabled { background: #333; color: #666; cursor: default; }
+
+    .btn-cancel-edit {
+      background: none;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #666;
+      font-size: 0.85rem;
+      padding: 7px 12px;
+      cursor: pointer;
+    }
+    .btn-cancel-edit:hover { border-color: #555; color: #aaa; }
+
+    .edit-error {
+      font-size: 0.8rem;
+      color: #cf6f6f;
+      margin-top: 8px;
+    }
   </style>
 </head>
 <body>
@@ -212,12 +363,25 @@
     <div id="results"></div>
   </div>
 
+  <div class="confirm-overlay" id="delete-overlay">
+    <div class="confirm-box">
+      <p>Delete <strong id="confirm-delete-name"></strong>?<br>This can't be undone.</p>
+      <div class="confirm-actions">
+        <button class="btn-cancel" onclick="closeDeleteOverlay()">Cancel</button>
+        <button class="btn-confirm-delete" onclick="executeDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     let allExercises = [];
     let muscleGroups = [];
     let equipmentValues = [];
     const selectedMuscles = new Set();
     const selectedEquipment = new Set();
+    let activeEditId = null;
+    let editMuscleGroupIds = new Set();
+    let pendingDeleteId = null;
 
     const MAX_UNFILTERED = 60;
 
@@ -238,6 +402,31 @@
       } catch (e) {
         document.getElementById('loading').textContent = 'Failed to load exercises.';
       }
+    }
+
+    function escHtml(str) {
+      return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function renderRow(ex) {
+      const equipTag = ex.equipment
+        ? `<span class="tag tag-equipment">${escHtml(ex.equipment)}</span>`
+        : '';
+      const muscleTags = ex.muscle_groups.slice(0, 3)
+        .map(mg => `<span class="tag tag-muscle">${escHtml(mg.name)}</span>`)
+        .join('');
+      return `<div class="ex-row" id="row-${ex.id}">
+        <div class="ex-row-main">
+          <a class="ex-row-link" href="/exercise/${ex.id}">
+            <div class="ex-row-name">${escHtml(ex.name)}</div>
+            <div class="ex-row-tags">${equipTag}${muscleTags}</div>
+          </a>
+          <div class="ex-row-actions">
+            <button class="btn-edit" onclick="openEdit(${ex.id})">Edit</button>
+            <button class="btn-delete-row" onclick="confirmDeleteExercise(${ex.id})">Delete</button>
+          </div>
+        </div>
+      </div>`;
     }
 
     function filter() {
@@ -268,18 +457,10 @@
         return;
       }
 
-      container.innerHTML = toShow.map(ex => {
-        const equipTag = ex.equipment
-          ? `<span class="tag tag-equipment">${ex.equipment}</span>`
-          : '';
-        const muscleTags = ex.muscle_groups.slice(0, 3)
-          .map(mg => `<span class="tag tag-muscle">${mg.name}</span>`)
-          .join('');
-        return `<a class="ex-row" href="/exercise/${ex.id}">
-          <div class="ex-row-name">${ex.name}</div>
-          <div class="ex-row-tags">${equipTag}${muscleTags}</div>
-        </a>`;
-      }).join('');
+      activeEditId = null;
+      editMuscleGroupIds = new Set();
+
+      container.innerHTML = toShow.map(ex => renderRow(ex)).join('');
     }
 
     function toggleFilter(type) {
@@ -354,8 +535,247 @@
       filter();
     }
 
+    function equipmentOptions(current) {
+      const values = [
+        'assisted', 'band', 'barbell', 'body weight', 'bosu ball', 'cable',
+        'dumbbell', 'elliptical machine', 'ez barbell', 'hammer', 'kettlebell',
+        'leverage machine', 'medicine ball', 'olympic barbell', 'resistance band',
+        'roller', 'rope', 'skierg machine', 'sled machine', 'smith machine',
+        'stability ball', 'stationary bike', 'stepmill machine', 'tire', 'trap bar',
+        'upper body ergometer', 'weighted', 'wheel roller',
+      ];
+      return `<option value=""${current === '' ? ' selected' : ''}>— none —</option>` +
+        values.map(v => `<option value="${v}"${v === current ? ' selected' : ''}>${v}</option>`).join('');
+    }
+
+    function renderEditRow(ex) {
+      const nameVal = escHtml(ex.name);
+      const targetVal = escHtml(ex.target || '');
+      const instrVal = escHtml(ex.instructions || '');
+      return `<div class="ex-row ex-row--editing" id="row-${ex.id}">
+    <label class="edit-label">Name</label>
+    <input id="edit-name-${ex.id}" class="edit-input" value="${nameVal}" autocomplete="off" />
+
+    <label class="edit-label">Equipment</label>
+    <select id="edit-equipment-${ex.id}" class="edit-input">
+      ${equipmentOptions(ex.equipment || '')}
+    </select>
+
+    <label class="edit-label">Target</label>
+    <input id="edit-target-${ex.id}" class="edit-input" value="${targetVal}" placeholder="e.g. biceps" autocomplete="off" />
+
+    <label class="edit-label">Instructions</label>
+    <textarea id="edit-instructions-${ex.id}" class="edit-textarea" rows="4" placeholder="How to perform this exercise…">${instrVal}</textarea>
+
+    <label class="edit-label">Muscle Groups</label>
+    <div class="filter-wrap" id="mg-wrap-${ex.id}">
+      <button class="filter-trigger" id="mg-trigger-${ex.id}"
+              onclick="toggleMgPanel(${ex.id})">Muscle Groups ▾</button>
+      <div class="filter-panel" id="mg-panel-${ex.id}">
+        <input class="filter-search" placeholder="Search muscles…"
+               oninput="renderMgOptions(${ex.id}, this.value)" />
+        <div class="filter-list" id="mg-list-${ex.id}"></div>
+      </div>
+    </div>
+
+    <p class="edit-error" id="edit-error-${ex.id}" style="display:none"></p>
+
+    <div class="edit-actions">
+      <button class="btn-cancel-edit" onclick="closeEdit(${ex.id})">Cancel</button>
+      <button class="btn-save" id="edit-save-${ex.id}" onclick="saveEdit(${ex.id})">Save</button>
+    </div>
+  </div>`;
+    }
+
+    function openEdit(id) {
+      if (activeEditId !== null && activeEditId !== id) {
+        closeEdit(activeEditId);
+      }
+      activeEditId = id;
+      const ex = allExercises.find(e => e.id === id);
+      editMuscleGroupIds = new Set(ex.muscle_groups.map(mg => mg.id));
+      const rowEl = document.getElementById(`row-${id}`);
+      rowEl.outerHTML = renderEditRow(ex);
+      renderMgOptions(id, '');
+      updateMgTrigger(id);
+    }
+
+    function closeEdit(id) {
+      activeEditId = null;
+      editMuscleGroupIds = new Set();
+      const ex = allExercises.find(e => e.id === id);
+      if (!ex) return;
+      const rowEl = document.getElementById(`row-${id}`);
+      if (rowEl) rowEl.outerHTML = renderRow(ex);
+    }
+
+    function toggleMgPanel(id) {
+      const panel = document.getElementById(`mg-panel-${id}`);
+      const isOpen = panel.classList.contains('open');
+      // Close existing filter panels first
+      document.querySelectorAll('.filter-panel.open').forEach(p => {
+        if (p.id !== `mg-panel-${id}`) p.classList.remove('open');
+      });
+      if (isOpen) {
+        panel.classList.remove('open');
+      } else {
+        panel.classList.add('open');
+        renderMgOptions(id, '');
+        panel.querySelector('.filter-search').focus();
+      }
+    }
+
+    function renderMgOptions(id, query) {
+      const listEl = document.getElementById(`mg-list-${id}`);
+      if (!listEl) return;
+      const q = query.toLowerCase();
+      const opts = q ? muscleGroups.filter(mg => mg.name.toLowerCase().includes(q)) : muscleGroups;
+      if (opts.length === 0) {
+        listEl.innerHTML = '<div class="filter-empty">No results</div>';
+        return;
+      }
+      listEl.innerHTML = opts.map(mg => {
+        const checked = editMuscleGroupIds.has(mg.id);
+        return `<label class="filter-option ${checked ? 'checked' : ''}">
+      <input type="checkbox" ${checked ? 'checked' : ''}
+        onchange="toggleMgOption(${id}, ${mg.id}, this.checked)" />
+      ${escHtml(mg.name)}
+    </label>`;
+      }).join('');
+    }
+
+    function toggleMgOption(editId, mgId, checked) {
+      checked ? editMuscleGroupIds.add(mgId) : editMuscleGroupIds.delete(mgId);
+      updateMgTrigger(editId);
+      const searchInput = document.querySelector(`#mg-panel-${editId} .filter-search`);
+      renderMgOptions(editId, searchInput ? searchInput.value : '');
+    }
+
+    function updateMgTrigger(id) {
+      const btn = document.getElementById(`mg-trigger-${id}`);
+      if (!btn) return;
+      const count = editMuscleGroupIds.size;
+      if (count === 0) {
+        btn.textContent = 'Muscle Groups ▾';
+        btn.classList.remove('active');
+      } else {
+        btn.textContent = `${count} muscle group${count !== 1 ? 's' : ''} ▾`;
+        btn.classList.add('active');
+      }
+    }
+
+    async function saveEdit(id) {
+      const name = document.getElementById(`edit-name-${id}`).value.trim();
+      const equipment = document.getElementById(`edit-equipment-${id}`).value.trim() || null;
+      const target = document.getElementById(`edit-target-${id}`).value.trim() || null;
+      const instructions = document.getElementById(`edit-instructions-${id}`).value.trim() || null;
+      const muscle_group_ids = [...editMuscleGroupIds];
+
+      const errEl = document.getElementById(`edit-error-${id}`);
+      if (!name) {
+        errEl.textContent = 'Name is required';
+        errEl.style.display = 'block';
+        return;
+      }
+      errEl.style.display = 'none';
+
+      const saveBtn = document.getElementById(`edit-save-${id}`);
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+
+      try {
+        const res = await fetch(`/api/exercise/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, equipment, target, instructions, muscle_group_ids }),
+        });
+
+        if (res.ok) {
+          const updated = await res.json();
+          const idx = allExercises.findIndex(e => e.id === id);
+          if (idx !== -1) allExercises[idx] = updated;
+          activeEditId = null;
+          editMuscleGroupIds = new Set();
+          const rowEl = document.getElementById(`row-${id}`);
+          if (rowEl) rowEl.outerHTML = renderRow(updated);
+        } else if (res.status === 409) {
+          errEl.textContent = 'An exercise with that name already exists';
+          errEl.style.display = 'block';
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save';
+        } else {
+          errEl.textContent = 'Failed to save. Try again.';
+          errEl.style.display = 'block';
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save';
+        }
+      } catch {
+        errEl.textContent = 'Failed to save. Try again.';
+        errEl.style.display = 'block';
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+      }
+    }
+
+    function confirmDeleteExercise(id) {
+      const ex = allExercises.find(e => e.id === id);
+      pendingDeleteId = id;
+      document.getElementById('confirm-delete-name').textContent = ex ? ex.name : 'this exercise';
+      document.getElementById('delete-overlay').classList.add('open');
+    }
+
+    function closeDeleteOverlay() {
+      document.getElementById('delete-overlay').classList.remove('open');
+      pendingDeleteId = null;
+    }
+
+    async function executeDelete() {
+      if (pendingDeleteId === null) return;
+      const id = pendingDeleteId;
+      closeDeleteOverlay();
+
+      try {
+        const res = await fetch(`/api/exercise/${id}`, { method: 'DELETE' });
+
+        if (res.status === 204) {
+          const idx = allExercises.findIndex(e => e.id === id);
+          if (idx !== -1) allExercises.splice(idx, 1);
+          filter();
+        } else if (res.status === 409) {
+          const rowEl = document.getElementById(`row-${id}`);
+          if (rowEl) {
+            let msgEl = rowEl.querySelector('.delete-error-msg');
+            if (!msgEl) {
+              msgEl = document.createElement('p');
+              msgEl.className = 'delete-error-msg';
+              msgEl.style.cssText = 'font-size:0.8rem;color:#8a4a4a;padding:6px 14px 8px;margin:0';
+              rowEl.appendChild(msgEl);
+            }
+            msgEl.textContent = "Can't delete — this exercise has logged history";
+          }
+        } else if (res.status === 404) {
+          const idx = allExercises.findIndex(e => e.id === id);
+          if (idx !== -1) allExercises.splice(idx, 1);
+          filter();
+        }
+      } catch {
+        const rowEl = document.getElementById(`row-${id}`);
+        if (rowEl) {
+          let msgEl = rowEl.querySelector('.delete-error-msg');
+          if (!msgEl) {
+            msgEl = document.createElement('p');
+            msgEl.className = 'delete-error-msg';
+            msgEl.style.cssText = 'font-size:0.8rem;color:#8a4a4a;padding:6px 14px 8px;margin:0';
+            rowEl.appendChild(msgEl);
+          }
+          msgEl.textContent = 'Delete failed. Try again.';
+        }
+      }
+    }
+
     document.addEventListener('click', e => {
       if (!e.target.closest('.filter-wrap')) closeAllFilters();
+      if (e.target === document.getElementById('delete-overlay')) closeDeleteOverlay();
     });
 
     init();
