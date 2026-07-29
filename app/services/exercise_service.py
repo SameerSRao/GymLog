@@ -63,6 +63,20 @@ def update_exercise(db: Session, exercise_id: int, data: ExerciseUpdate) -> Opti
     return exercise
 
 
+def delete_exercise(db: Session, exercise_id: int) -> bool:
+    exercise = db.query(ExerciseDef).filter(ExerciseDef.id == exercise_id).first()
+    if not exercise:
+        return False
+
+    has_sets = db.query(Exercise).filter(Exercise.exercise_id == exercise_id).first()
+    if has_sets:
+        raise ValueError("has_history")
+
+    db.delete(exercise)
+    db.commit()
+    return True
+
+
 def get_exercise_progression(db: Session, exercise_id: int):
     exercise = db.query(ExerciseDef).filter(ExerciseDef.id == exercise_id).first()
     if not exercise:

@@ -76,6 +76,8 @@ All endpoints are prefixed with `/api`.
 | POST | `/api/exercises` | Create a custom exercise |
 | GET | `/api/muscle-groups` | List all muscle groups |
 | GET | `/api/exercise/{id}/info` | Exercise detail |
+| PUT | `/api/exercise/{id}` | Update an exercise (partial or full) |
+| DELETE | `/api/exercise/{id}` | Delete an exercise (409 if it has logged history) |
 | GET | `/api/exercise/{id}/progression` | Workout history for a lift |
 
 ---
