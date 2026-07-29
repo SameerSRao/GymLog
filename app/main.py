@@ -8,9 +8,8 @@ from app.api.routes import router
 from app.api.exercise_routes import router as exercise_router
 from app.db.seed import seed_exercises
 
-Base.metadata.create_all(bind=engine)
-
 if not os.getenv("TESTING"):
+    Base.metadata.create_all(bind=engine)
     with SessionLocal() as db:
         seed_exercises(db)
 
