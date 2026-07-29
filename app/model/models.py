@@ -30,7 +30,6 @@ class ExerciseDef(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     equipment: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    target: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     instructions: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     muscle_groups: Mapped[list["MuscleGroup"]] = relationship(

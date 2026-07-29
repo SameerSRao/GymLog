@@ -550,7 +550,6 @@
 
     function renderEditRow(ex) {
       const nameVal = escHtml(ex.name);
-      const targetVal = escHtml(ex.target || '');
       const instrVal = escHtml(ex.instructions || '');
       return `<div class="ex-row ex-row--editing" id="row-${ex.id}">
     <label class="edit-label">Name</label>
@@ -560,9 +559,6 @@
     <select id="edit-equipment-${ex.id}" class="edit-input">
       ${equipmentOptions(ex.equipment || '')}
     </select>
-
-    <label class="edit-label">Target</label>
-    <input id="edit-target-${ex.id}" class="edit-input" value="${targetVal}" placeholder="e.g. biceps" autocomplete="off" />
 
     <label class="edit-label">Instructions</label>
     <textarea id="edit-instructions-${ex.id}" class="edit-textarea" rows="4" placeholder="How to perform this exercise…">${instrVal}</textarea>
@@ -667,7 +663,6 @@
     async function saveEdit(id) {
       const name = document.getElementById(`edit-name-${id}`).value.trim();
       const equipment = document.getElementById(`edit-equipment-${id}`).value.trim() || null;
-      const target = document.getElementById(`edit-target-${id}`).value.trim() || null;
       const instructions = document.getElementById(`edit-instructions-${id}`).value.trim() || null;
       const muscle_group_ids = [...editMuscleGroupIds];
 
@@ -687,7 +682,7 @@
         const res = await fetch(`/api/exercise/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, equipment, target, instructions, muscle_group_ids }),
+          body: JSON.stringify({ name, equipment, instructions, muscle_group_ids }),
         });
 
         if (res.ok) {

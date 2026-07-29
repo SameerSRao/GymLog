@@ -63,7 +63,6 @@ def seed_exercises(db: Session) -> None:
         db.add(ExerciseDef(
             name=ex["name"],
             equipment=ex.get("equipment"),
-            target=ex.get("target"),
             instructions=instructions,
             muscle_groups=muscles,
         ))

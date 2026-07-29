@@ -22,7 +22,6 @@ def create_exercise(db: Session, data: CreateExerciseSchema) -> ExerciseDef:
     exercise = ExerciseDef(
         name=data.name,
         equipment=data.equipment,
-        target=data.target,
         instructions=data.instructions,
         muscle_groups=muscle_groups,
     )
@@ -48,8 +47,6 @@ def update_exercise(db: Session, exercise_id: int, data: ExerciseUpdate) -> Opti
 
     if data.equipment is not None:
         exercise.equipment = data.equipment
-    if data.target is not None:
-        exercise.target = data.target
     if data.instructions is not None:
         exercise.instructions = data.instructions
 

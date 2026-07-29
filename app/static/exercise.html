@@ -41,7 +41,6 @@
     }
     .tag-equipment { background: #1c1c2e; border: 1px solid #3a3a5a; color: #8888cc; }
     .tag-muscle    { background: #252525; border: 1px solid #3a3a3a; color: #aaa; }
-    .tag-target    { background: #1e2a1e; border: 1px solid #3a5a3a; color: #7aaa7a; }
 
     details {
       background: #1a1a1a;
@@ -424,7 +423,7 @@
       const tags = [];
       if (info.equipment) tags.push(`<span class="tag tag-equipment">${escHtml(info.equipment)}</span>`);
       for (const mg of info.muscle_groups) tags.push(`<span class="tag tag-muscle">${escHtml(mg.name)}</span>`);
-      if (info.target) tags.push(`<span class="tag tag-target">${escHtml(info.target)}</span>`);
+
 
       const instructionsHtml = info.instructions
         ? `<details>
@@ -450,9 +449,6 @@
         <select id="detail-edit-equipment" class="edit-input">
           ${equipmentOptions(info.equipment || '')}
         </select>
-
-        <label class="edit-label">Target</label>
-        <input id="detail-edit-target" class="edit-input" value="${escHtml(info.target || '')}" placeholder="e.g. biceps" autocomplete="off" />
 
         <label class="edit-label">Instructions</label>
         <textarea id="detail-edit-instructions" class="edit-textarea" rows="4" placeholder="How to perform this exercise…">${escHtml(info.instructions || '')}</textarea>
@@ -520,7 +516,6 @@
     async function saveEditDetail() {
       const name = document.getElementById('detail-edit-name').value.trim();
       const equipment = document.getElementById('detail-edit-equipment').value || null;
-      const target = document.getElementById('detail-edit-target').value.trim() || null;
       const instructions = document.getElementById('detail-edit-instructions').value.trim() || null;
       const muscle_group_ids = [...detailEditMgIds];
 
@@ -540,7 +535,7 @@
         const res = await fetch(`/api/exercise/${exerciseId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, equipment, target, instructions, muscle_group_ids }),
+          body: JSON.stringify({ name, equipment, instructions, muscle_group_ids }),
         });
 
         if (res.ok) {

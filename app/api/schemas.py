@@ -12,7 +12,6 @@ class ExerciseDefSchema(BaseModel):
     id: int
     name: str
     equipment: Optional[str] = None
-    target: Optional[str] = None
     instructions: Optional[str] = None
     muscle_groups: list[MuscleGroupSchema]
 
@@ -20,7 +19,6 @@ class ExerciseDefSchema(BaseModel):
 class CreateExerciseSchema(BaseModel):
     name: str
     equipment: Optional[str] = None
-    target: Optional[str] = None
     instructions: Optional[str] = None
     muscle_group_ids: list[int]
 
@@ -28,7 +26,6 @@ class CreateExerciseSchema(BaseModel):
 class ExerciseUpdate(BaseModel):
     name: Optional[str] = None
     equipment: Optional[str] = None
-    target: Optional[str] = None
     instructions: Optional[str] = None
     muscle_group_ids: Optional[list[int]] = None
 
