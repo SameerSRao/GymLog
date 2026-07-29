@@ -1,7 +1,8 @@
-from app.model.models import MuscleGroup, ExerciseDef, Exercise
+from app.model.models import Exercise, ExerciseDef, MuscleGroup
 
 
 def make_muscle_group(db, name="pectorals"):
+    """Insert a MuscleGroup into the test database and return it."""
     mg = MuscleGroup(name=name)
     db.add(mg)
     db.commit()
@@ -11,6 +12,7 @@ def make_muscle_group(db, name="pectorals"):
 
 def make_exercise(db, name="Bench Press", equipment="barbell",
                   instructions="Press the bar up", muscle_groups=None):
+    """Insert an ExerciseDef into the test database and return it."""
     ex = ExerciseDef(
         name=name,
         equipment=equipment,
@@ -28,6 +30,7 @@ def make_exercise(db, name="Bench Press", equipment="barbell",
 # ---------------------------------------------------------------------------
 
 def test_create_workout_single_exercise(client, db):
+    """Assert POST /api/workouts logs one exercise with one set correctly."""
     ex = make_exercise(db)
     r = client.post("/api/workouts", json={
         "exercises": [{"exercise_id": ex.id, "sets": [{"reps": 5, "weight_lbs": 135}]}]
@@ -40,6 +43,7 @@ def test_create_workout_single_exercise(client, db):
 
 
 def test_create_workout_multiple_exercises(client, db):
+    """Assert POST /api/workouts logs multiple exercises and counts sets correctly."""
     ex1 = make_exercise(db, name="Bench Press")
     ex2 = make_exercise(db, name="Squat")
     r = client.post("/api/workouts", json={
@@ -63,6 +67,7 @@ def test_create_workout_multiple_exercises(client, db):
 
 
 def test_create_workout_bodyweight_exercise(client, db):
+    """Assert POST /api/workouts accepts a set with no weight_lbs."""
     ex = make_exercise(db)
     r = client.post("/api/workouts", json={
         "exercises": [{"exercise_id": ex.id, "sets": [{"reps": 10}]}]
@@ -72,6 +77,7 @@ def test_create_workout_bodyweight_exercise(client, db):
 
 
 def test_create_workout_with_notes(client, db):
+    """Assert POST /api/workouts persists notes and returns them in the detail response."""
     ex = make_exercise(db)
     r = client.post("/api/workouts", json={
         "exercises": [{"exercise_id": ex.id, "sets": [{"reps": 5, "weight_lbs": 135}]}],
@@ -85,6 +91,7 @@ def test_create_workout_with_notes(client, db):
 
 
 def test_create_workout_with_custom_timestamp(client, db):
+    """Assert POST /api/workouts persists a custom logged_at timestamp."""
     ex = make_exercise(db)
     r = client.post("/api/workouts", json={
         "exercises": [{"exercise_id": ex.id, "sets": [{"reps": 5, "weight_lbs": 135}]}],
@@ -97,6 +104,7 @@ def test_create_workout_with_custom_timestamp(client, db):
 
 
 def test_create_workout_empty_exercises(client):
+    """Assert POST /api/workouts succeeds with an empty exercises list."""
     r = client.post("/api/workouts", json={"exercises": []})
     assert r.status_code == 200
     data = r.json()
@@ -109,12 +117,14 @@ def test_create_workout_empty_exercises(client):
 # ---------------------------------------------------------------------------
 
 def test_list_workouts_empty(client):
+    """Assert GET /api/workouts returns an empty list when no sessions exist."""
     r = client.get("/api/workouts")
     assert r.status_code == 200
     assert r.json() == []
 
 
 def test_list_workouts(client, db):
+    """Assert GET /api/workouts returns all sessions with required summary fields."""
     ex = make_exercise(db)
     for _ in range(3):
         client.post("/api/workouts", json={
@@ -132,6 +142,7 @@ def test_list_workouts(client, db):
 
 
 def test_list_workouts_ordered_by_date_desc(client, db):
+    """Assert GET /api/workouts returns sessions newest-first."""
     ex = make_exercise(db)
     client.post("/api/workouts", json={
         "exercises": [{"exercise_id": ex.id, "sets": [{"reps": 5, "weight_lbs": 100}]}],
@@ -151,13 +162,18 @@ def test_list_workouts_ordered_by_date_desc(client, db):
 # ---------------------------------------------------------------------------
 
 def test_get_workout_detail(client, db):
+    """Assert GET /api/workout/{id} returns exercises with muscle groups and correct sets."""
     mg = make_muscle_group(db, name="pectorals")
     ex1 = make_exercise(db, name="Bench Press", muscle_groups=[mg])
     ex2 = make_exercise(db, name="Squat", muscle_groups=[mg])
     r = client.post("/api/workouts", json={
         "exercises": [
-            {"exercise_id": ex1.id, "sets": [{"reps": 5, "weight_lbs": 135}, {"reps": 5, "weight_lbs": 145}]},
-            {"exercise_id": ex2.id, "sets": [{"reps": 5, "weight_lbs": 185}, {"reps": 5, "weight_lbs": 195}]},
+            {"exercise_id": ex1.id, "sets": [
+                {"reps": 5, "weight_lbs": 135}, {"reps": 5, "weight_lbs": 145}
+            ]},
+            {"exercise_id": ex2.id, "sets": [
+                {"reps": 5, "weight_lbs": 185}, {"reps": 5, "weight_lbs": 195}
+            ]},
         ]
     })
     session_id = r.json()["session_id"]
@@ -173,6 +189,7 @@ def test_get_workout_detail(client, db):
 
 
 def test_get_workout_not_found(client):
+    """Assert GET /api/workout/{id} returns 404 for an unknown session ID."""
     r = client.get("/api/workout/9999")
     assert r.status_code == 404
 
@@ -182,6 +199,7 @@ def test_get_workout_not_found(client):
 # ---------------------------------------------------------------------------
 
 def test_update_workout_replace_exercises(client, db):
+    """Assert PUT /api/workout/{id} replaces all exercises and returns only the new ones."""
     ex_a = make_exercise(db, name="Bench Press")
     ex_b = make_exercise(db, name="Squat")
     r = client.post("/api/workouts", json={
@@ -206,6 +224,7 @@ def test_update_workout_replace_exercises(client, db):
 
 
 def test_update_workout_not_found(client, db):
+    """Assert PUT /api/workout/{id} returns 404 for an unknown session ID."""
     ex = make_exercise(db)
     r = client.put("/api/workout/9999", json={
         "exercises": [{"exercise_id": ex.id, "sets": [{"reps": 5, "weight_lbs": 135}]}]
@@ -218,6 +237,7 @@ def test_update_workout_not_found(client, db):
 # ---------------------------------------------------------------------------
 
 def test_delete_workout(client, db):
+    """Assert DELETE /api/workout/{id} removes the session and returns its ID."""
     ex = make_exercise(db)
     r = client.post("/api/workouts", json={
         "exercises": [{"exercise_id": ex.id, "sets": [{"reps": 5, "weight_lbs": 135}]}]
@@ -229,11 +249,13 @@ def test_delete_workout(client, db):
 
 
 def test_delete_workout_not_found(client):
+    """Assert DELETE /api/workout/{id} returns 404 for an unknown session ID."""
     r = client.delete("/api/workout/9999")
     assert r.status_code == 404
 
 
 def test_delete_workout_cascades_sets(client, db):
+    """Assert DELETE /api/workout/{id} also removes all associated exercise sets."""
     ex = make_exercise(db)
     r = client.post("/api/workouts", json={
         "exercises": [{"exercise_id": ex.id, "sets": [

@@ -1,24 +1,35 @@
 from collections import defaultdict
-from typing import Optional
+
 from sqlalchemy.orm import Session
-from app.model.models import ExerciseDef, MuscleGroup, Exercise, Workout
+
 from app.api.schemas import CreateExerciseSchema, ExerciseUpdate
+from app.model.models import Exercise, ExerciseDef, MuscleGroup, Workout
 
 
 def get_all_exercises(db: Session) -> list[ExerciseDef]:
+    """Return all exercises ordered alphabetically by name."""
     return db.query(ExerciseDef).order_by(ExerciseDef.name).all()
 
 
-def get_exercise(db: Session, exercise_id: int) -> Optional[ExerciseDef]:
-    return db.query(ExerciseDef).filter(ExerciseDef.id == exercise_id).first()
+def get_exercise(db: Session, exercise_id: int) -> ExerciseDef | None:
+    """Return a single exercise by ID, or None if not found."""
+    return (
+        db.query(ExerciseDef).filter(ExerciseDef.id == exercise_id).first()
+    )
 
 
 def get_all_muscle_groups(db: Session) -> list[MuscleGroup]:
+    """Return all muscle groups ordered alphabetically by name."""
     return db.query(MuscleGroup).order_by(MuscleGroup.name).all()
 
 
 def create_exercise(db: Session, data: CreateExerciseSchema) -> ExerciseDef:
-    muscle_groups = db.query(MuscleGroup).filter(MuscleGroup.id.in_(data.muscle_group_ids)).all()
+    """Create and persist a new exercise with the given muscle groups."""
+    muscle_groups = (
+        db.query(MuscleGroup)
+        .filter(MuscleGroup.id.in_(data.muscle_group_ids))
+        .all()
+    )
     exercise = ExerciseDef(
         name=data.name,
         equipment=data.equipment,
@@ -31,8 +42,17 @@ def create_exercise(db: Session, data: CreateExerciseSchema) -> ExerciseDef:
     return exercise
 
 
-def update_exercise(db: Session, exercise_id: int, data: ExerciseUpdate) -> Optional[ExerciseDef]:
-    exercise = db.query(ExerciseDef).filter(ExerciseDef.id == exercise_id).first()
+def update_exercise(
+    db: Session, exercise_id: int, data: ExerciseUpdate
+) -> ExerciseDef | None:
+    """Partially update an exercise; returns None if not found.
+
+    Raises ValueError('name_conflict') if the new name is already taken by
+    another exercise.
+    """
+    exercise = (
+        db.query(ExerciseDef).filter(ExerciseDef.id == exercise_id).first()
+    )
     if not exercise:
         return None
 
@@ -51,9 +71,11 @@ def update_exercise(db: Session, exercise_id: int, data: ExerciseUpdate) -> Opti
         exercise.instructions = data.instructions
 
     if data.muscle_group_ids is not None:
-        exercise.muscle_groups = db.query(MuscleGroup).filter(
-            MuscleGroup.id.in_(data.muscle_group_ids)
-        ).all()
+        exercise.muscle_groups = (
+            db.query(MuscleGroup)
+            .filter(MuscleGroup.id.in_(data.muscle_group_ids))
+            .all()
+        )
 
     db.commit()
     db.refresh(exercise)
@@ -61,11 +83,19 @@ def update_exercise(db: Session, exercise_id: int, data: ExerciseUpdate) -> Opti
 
 
 def delete_exercise(db: Session, exercise_id: int) -> bool:
-    exercise = db.query(ExerciseDef).filter(ExerciseDef.id == exercise_id).first()
+    """Delete an exercise; returns False if not found.
+
+    Raises ValueError('has_history') if the exercise has logged sets.
+    """
+    exercise = (
+        db.query(ExerciseDef).filter(ExerciseDef.id == exercise_id).first()
+    )
     if not exercise:
         return False
 
-    has_sets = db.query(Exercise).filter(Exercise.exercise_id == exercise_id).first()
+    has_sets = (
+        db.query(Exercise).filter(Exercise.exercise_id == exercise_id).first()
+    )
     if has_sets:
         raise ValueError("has_history")
 
@@ -75,7 +105,15 @@ def delete_exercise(db: Session, exercise_id: int) -> bool:
 
 
 def get_exercise_progression(db: Session, exercise_id: int):
-    exercise = db.query(ExerciseDef).filter(ExerciseDef.id == exercise_id).first()
+    """Return (exercise, sessions) for an exercise's progression history.
+
+    sessions is a list of dicts sorted chronologically, each containing
+    session_id, logged_at, sets, volume, and best_set_weight.
+    Returns (None, []) if the exercise does not exist.
+    """
+    exercise = (
+        db.query(ExerciseDef).filter(ExerciseDef.id == exercise_id).first()
+    )
     if not exercise:
         return None, []
 
@@ -94,14 +132,34 @@ def get_exercise_progression(db: Session, exercise_id: int):
         session_map[sid]["sets"].append(ex_set)
 
     sessions = []
-    for sid, data in sorted(session_map.items(), key=lambda x: x[1]["logged_at"]):
+    for sid, data in sorted(
+        session_map.items(), key=lambda x: x[1]["logged_at"]
+    ):
         s_sets = data["sets"]
         weights = [s.weight_lbs for s in s_sets if s.weight_lbs is not None]
-        volume = round(sum(s.reps * s.weight_lbs for s in s_sets if s.weight_lbs is not None), 1) if weights else None
+        volume = (
+            round(
+                sum(
+                    s.reps * s.weight_lbs
+                    for s in s_sets
+                    if s.weight_lbs is not None
+                ),
+                1,
+            )
+            if weights
+            else None
+        )
         sessions.append({
             "session_id": sid,
             "logged_at": data["logged_at"],
-            "sets": [{"set_number": s.set_number, "reps": s.reps, "weight_lbs": s.weight_lbs} for s in s_sets],
+            "sets": [
+                {
+                    "set_number": s.set_number,
+                    "reps": s.reps,
+                    "weight_lbs": s.weight_lbs,
+                }
+                for s in s_sets
+            ],
             "volume": volume,
             "best_set_weight": max(weights) if weights else None,
         })

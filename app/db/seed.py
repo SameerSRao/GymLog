@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
+
 from sqlalchemy.orm import Session
+
 from app.model.models import ExerciseDef, MuscleGroup
 
 _EXERCISES_FILE = Path(__file__).parent.parent.parent / "exercises.json"
@@ -16,10 +18,12 @@ _ALIASES: dict[str, str] = {
 
 
 def _canonical(name: str) -> str:
+    """Return the canonical muscle group name, collapsing known aliases."""
     return _ALIASES.get(name, name)
 
 
 def seed_exercises(db: Session) -> None:
+    """Populate the database with exercises from exercises.json; no-op if already seeded."""
     if db.query(ExerciseDef).count() > 0:
         return
 
@@ -29,7 +33,10 @@ def seed_exercises(db: Session) -> None:
     # Collect canonical muscle names (aliases already collapsed)
     all_muscles: set[str] = set()
     for ex in data:
-        for m in [ex.get("target"), ex.get("muscle_group")] + ex.get("secondary_muscles", []):
+        for m in (
+            [ex.get("target"), ex.get("muscle_group")]
+            + ex.get("secondary_muscles", [])
+        ):
             if m:
                 all_muscles.add(_canonical(m))
 
@@ -49,7 +56,10 @@ def seed_exercises(db: Session) -> None:
 
         muscles: list[MuscleGroup] = []
         seen_muscles: set[str] = set()
-        for m in [ex.get("target"), ex.get("muscle_group")] + ex.get("secondary_muscles", []):
+        for m in (
+            [ex.get("target"), ex.get("muscle_group")]
+            + ex.get("secondary_muscles", [])
+        ):
             if not m:
                 continue
             canonical = _canonical(m)
@@ -58,7 +68,11 @@ def seed_exercises(db: Session) -> None:
                 seen_muscles.add(canonical)
 
         instructions_raw = ex.get("instructions", {})
-        instructions = instructions_raw.get("en") if isinstance(instructions_raw, dict) else None
+        instructions = (
+            instructions_raw.get("en")
+            if isinstance(instructions_raw, dict)
+            else None
+        )
 
         db.add(ExerciseDef(
             name=ex["name"],
