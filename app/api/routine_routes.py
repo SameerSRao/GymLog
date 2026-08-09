@@ -82,7 +82,10 @@ def replace_routine(
     data: RoutineUpdate,
     db: Session = Depends(get_db),
 ):
-    """Replace a routine's name and exercises; 404 if not found, 409 on conflict."""
+    """Replace a routine's name and exercises.
+
+    Returns 404 if not found, 409 on name conflict.
+    """
     try:
         routine = update_routine(db, routine_id, data)
     except ValueError as e:
