@@ -89,6 +89,22 @@ GymLog/
 | weight_lbs | FLOAT | nullable (bodyweight exercises) |
 | logged_at | DATETIME | UTC, default now |
 
+### `routines`
+| Column | Type | Notes |
+|--------|------|-------|
+| id | INTEGER | primary key |
+| name | TEXT | unique — e.g. "Push Day", "Full Body A" |
+| created_at | DATETIME | UTC, default now |
+
+### `routine_exercises`
+| Column | Type | Notes |
+|--------|------|-------|
+| id | INTEGER | primary key |
+| routine_id | INTEGER | FK → routines.id, cascade delete |
+| exercise_id | INTEGER | FK → exercises.id |
+| position | INTEGER | 1-indexed order within the routine |
+| num_sets | INTEGER | default number of sets to pre-fill |
+
 ---
 
 ## Routing
@@ -124,6 +140,15 @@ GymLog/
 | GET | `/api/workout/{id}` | Session detail with full exercise + set data |
 | PUT | `/api/workout/{id}` | Replace all exercises/sets for a session |
 | DELETE | `/api/workout/{id}` | Delete session and all its sets |
+
+#### Routines
+| Method | Route | Description |
+|--------|-------|-------------|
+| POST | `/api/routines` | Create a routine; 409 on name conflict |
+| GET | `/api/routines` | List all routines (id, name, exercise count) |
+| GET | `/api/routine/{id}` | Routine detail with ordered exercises and set counts |
+| PUT | `/api/routine/{id}` | Full replace — name and all exercises; 409 on name conflict |
+| DELETE | `/api/routine/{id}` | Delete routine (does not affect logged workouts) |
 
 #### Request/response shapes
 
