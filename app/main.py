@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.exercise_routes import router as exercise_router
+from app.api.routine_routes import router as routine_router
 from app.api.routes import router
 from app.db.database import Base, SessionLocal, engine
 from app.db.seed import seed_exercises
@@ -57,6 +58,7 @@ def index():
 
 app.include_router(router, prefix="/api")
 app.include_router(exercise_router, prefix="/api")
+app.include_router(routine_router, prefix="/api")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
