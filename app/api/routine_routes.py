@@ -9,6 +9,7 @@ from app.api.schemas import (
     RoutineUpdate,
 )
 from app.db.database import get_db
+from app.model.models import Routine
 from app.services.routine_service import (
     create_routine,
     delete_routine,
@@ -20,7 +21,7 @@ from app.services.routine_service import (
 router = APIRouter()
 
 
-def _to_detail(routine) -> RoutineDetail:
+def _to_detail(routine: Routine) -> RoutineDetail:
     """Build a RoutineDetail from a fully-loaded Routine ORM object."""
     return RoutineDetail(
         id=routine.id,
@@ -39,7 +40,7 @@ def _to_detail(routine) -> RoutineDetail:
 
 
 @router.post("/routines", response_model=RoutineDetail, status_code=201)
-def create(data: RoutineCreate, db: Session = Depends(get_db)):
+def create_routine(data: RoutineCreate, db: Session = Depends(get_db)):
     """Create a new routine; 409 if name is already taken."""
     try:
         routine = create_routine(db, data)
