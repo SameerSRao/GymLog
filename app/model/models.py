@@ -78,3 +78,39 @@ class Exercise(Base):
 
     session: Mapped["Workout"] = relationship(back_populates="sets")
     exercise_def: Mapped["ExerciseDef"] = relationship()
+
+
+class Routine(Base):
+    """A named workout routine — ordered template of exercises."""
+
+    __tablename__ = "routines"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+
+    exercises: Mapped[list["RoutineExercise"]] = relationship(
+        back_populates="routine",
+        cascade="all, delete-orphan",
+    )
+
+
+class RoutineExercise(Base):
+    """One exercise slot in a routine with position and default set count."""
+
+    __tablename__ = "routine_exercises"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    routine_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("routines.id"), nullable=False
+    )
+    exercise_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("exercises.id"), nullable=False
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    num_sets: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    routine: Mapped["Routine"] = relationship(back_populates="exercises")
+    exercise_def: Mapped["ExerciseDef"] = relationship()
