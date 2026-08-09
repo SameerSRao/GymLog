@@ -5,7 +5,10 @@ from app.model.models import Routine, RoutineExercise
 
 
 def create_routine(db: Session, data: RoutineCreate) -> Routine:
-    """Create a new routine; raises ValueError('name_conflict') if name taken."""
+    """Create a new routine.
+
+    Raises ValueError('name_conflict') if the name is already taken.
+    """
     if db.query(Routine).filter(Routine.name == data.name).first():
         raise ValueError("name_conflict")
     routine = Routine(name=data.name)
