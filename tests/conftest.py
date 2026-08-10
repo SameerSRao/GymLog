@@ -1,6 +1,8 @@
 import os
 
-os.environ["TESTING"] = "1"  # must be set before app.main is imported
+os.environ["TESTING"] = "1"          # must be set before app.main is imported
+os.environ.setdefault("ADMIN_PASSWORD", "testpassword")
+os.environ.setdefault("JWT_SECRET", "testsecret123")
 
 import pytest
 from fastapi.testclient import TestClient
@@ -8,6 +10,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.api.auth_routes import get_current_user
 from app.db.database import Base, get_db
 from app.main import app
 from app.model.models import ExerciseDef, MuscleGroup
@@ -72,10 +75,16 @@ def client(db):
     """Return a FastAPI TestClient with get_db overridden to use the test session.
 
     Reuses the same db session so data inserted via db is visible to HTTP handlers.
+    Auth is bypassed via a get_current_user override so tests focus on business logic.
     """
     def _override_get_db():
         yield db
+
+    def _override_get_current_user():
+        return {"sub": "admin"}
+
     app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_current_user] = _override_get_current_user
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()

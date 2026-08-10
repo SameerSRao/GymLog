@@ -389,7 +389,9 @@
     </div>
   </div>
 
+  <script src="/static/auth.js"></script>
   <script>
+    checkAuth();
     let allExercises = [];
     let muscleGroups = [];
     let equipmentValues = [];
@@ -404,8 +406,8 @@
     async function init() {
       try {
         const [exRes, mgRes] = await Promise.all([
-          fetch('/api/exercises'),
-          fetch('/api/muscle-groups'),
+          authFetch('/api/exercises'),
+          authFetch('/api/muscle-groups'),
         ]);
         if (!exRes.ok || !mgRes.ok) throw new Error('Failed to load');
         allExercises = await exRes.json();
@@ -695,7 +697,7 @@
       saveBtn.textContent = 'Saving…';
 
       try {
-        const res = await fetch(`/api/exercise/${id}`, {
+        const res = await authFetch(`/api/exercise/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, equipment, instructions, muscle_group_ids }),
@@ -746,7 +748,7 @@
       closeDeleteOverlay();
 
       try {
-        const res = await fetch(`/api/exercise/${id}`, { method: 'DELETE' });
+        const res = await authFetch(`/api/exercise/${id}`, { method: 'DELETE' });
 
         if (res.status === 204) {
           const idx = allExercises.findIndex(e => e.id === id);

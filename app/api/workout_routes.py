@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.api.auth_routes import get_current_user
 from app.api.schemas import WorkoutDetailed, WorkoutRequest, WorkoutResponse
 from app.db.database import get_db
 from app.services.workout_service import (
@@ -12,7 +13,7 @@ from app.services.workout_service import (
     update_workout,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_current_user)])
 
 
 @router.post("/workouts", response_model=WorkoutResponse)

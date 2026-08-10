@@ -466,7 +466,9 @@
     </div>
   </div>
 
+  <script src="/static/auth.js"></script>
   <script>
+    checkAuth();
     let workout = null;
     const sessionId = window.location.pathname.split('/').filter(Boolean).pop();
 
@@ -483,8 +485,8 @@
     async function loadExerciseData() {
       if (exerciseDataLoaded) return;
       const [exRes, mgRes] = await Promise.all([
-        fetch('/api/exercises'),
-        fetch('/api/muscle-groups'),
+        authFetch('/api/exercises'),
+        authFetch('/api/muscle-groups'),
       ]);
       allExercises = await exRes.json();
       muscleGroups = await mgRes.json();
@@ -717,7 +719,7 @@
     }
 
     async function load() {
-      const res = await fetch(`/api/workout/${sessionId}`);
+      const res = await authFetch(`/api/workout/${sessionId}`);
       if (!res.ok) {
         document.getElementById('loading').textContent = 'Workout not found.';
         return;
@@ -803,7 +805,7 @@
     }
 
     async function deleteWorkout() {
-      const res = await fetch(`/api/workout/${sessionId}`, { method: 'DELETE' });
+      const res = await authFetch(`/api/workout/${sessionId}`, { method: 'DELETE' });
       if (res.ok) window.location.href = '/workouts';
     }
 
@@ -882,7 +884,7 @@
       saveBtn.textContent = 'Saving…';
 
       try {
-        const res = await fetch(`/api/workout/${sessionId}`, {
+        const res = await authFetch(`/api/workout/${sessionId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ exercises, notes }),

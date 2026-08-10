@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.api.auth_routes import get_current_user
+
 from app.api.schemas import (
     RoutineCreate,
     RoutineDetail,
@@ -18,7 +20,7 @@ from app.services.routine_service import (
     update_routine,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_current_user)])
 
 
 def _validate_exercise_ids(

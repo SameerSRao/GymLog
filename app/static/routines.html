@@ -394,7 +394,9 @@
 
   <div id="toast"></div>
 
+  <script src="/static/auth.js"></script>
   <script>
+    checkAuth();
     let allRoutines = [];
     let allExercises = [];
     let exerciseMap = {};
@@ -406,8 +408,8 @@
 
     async function init() {
       const [routinesRes, exRes] = await Promise.all([
-        fetch('/api/routines'),
-        fetch('/api/exercises'),
+        authFetch('/api/routines'),
+        authFetch('/api/exercises'),
       ]);
       allRoutines = await routinesRes.json();
       allExercises = await exRes.json();
@@ -469,7 +471,7 @@
     async function loadDetail(id) {
       const viewEl = document.getElementById(`view-${id}`);
       try {
-        const res = await fetch(`/api/routine/${id}`);
+        const res = await authFetch(`/api/routine/${id}`);
         if (!res.ok) throw new Error();
         const routine = await res.json();
 
@@ -512,7 +514,7 @@
 
     async function enterEdit(id) {
       // Fetch fresh detail if not already available
-      const res = await fetch(`/api/routine/${id}`);
+      const res = await authFetch(`/api/routine/${id}`);
       if (!res.ok) { showToast('Failed to load routine', 'error'); return; }
       const routine = await res.json();
 
@@ -687,7 +689,7 @@
       };
 
       try {
-        const res = await fetch(`/api/routine/${id}`, {
+        const res = await authFetch(`/api/routine/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -702,7 +704,7 @@
         delete editState[id];
 
         // Update allRoutines and re-render card header
-        const updated = await fetch(`/api/routine/${id}`).then(r => r.json());
+        const updated = await authFetch(`/api/routine/${id}`).then(r => r.json());
         const idx = allRoutines.findIndex(r => r.id === id);
         if (idx !== -1) {
           allRoutines[idx] = {
@@ -764,7 +766,7 @@
       if (!id) return;
 
       try {
-        const res = await fetch(`/api/routine/${id}`, { method: 'DELETE' });
+        const res = await authFetch(`/api/routine/${id}`, { method: 'DELETE' });
         if (!res.ok) throw new Error();
 
         allRoutines = allRoutines.filter(r => r.id !== id);

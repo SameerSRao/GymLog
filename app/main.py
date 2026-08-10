@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.api.auth_routes import router as auth_router
 from app.api.exercise_routes import router as exercise_router
 from app.api.routine_routes import router as routine_router
 from app.api.workout_routes import router as workout_router
@@ -56,12 +57,19 @@ def log_page():
     return FileResponse("app/static/index.html", headers=NO_CACHE)
 
 
+@app.get("/login")
+def login_page():
+    """Serve the login page."""
+    return FileResponse("app/static/login.html", headers=NO_CACHE)
+
+
 @app.get("/")
 def index():
     """Serve the dashboard page."""
     return FileResponse("app/static/dashboard.html", headers=NO_CACHE)
 
 
+app.include_router(auth_router, prefix="/api")
 app.include_router(workout_router, prefix="/api")
 app.include_router(exercise_router, prefix="/api")
 app.include_router(routine_router, prefix="/api")
