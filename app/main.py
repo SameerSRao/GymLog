@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.auth_routes import router as auth_router
+from app.api.chat_routes import router as chat_router
 from app.api.exercise_routes import router as exercise_router
 from app.api.routine_routes import router as routine_router
 from app.api.workout_routes import router as workout_router
@@ -77,6 +78,7 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(workout_router, prefix="/api")
 app.include_router(exercise_router, prefix="/api")
 app.include_router(routine_router, prefix="/api")
+app.include_router(chat_router, prefix="/api")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
