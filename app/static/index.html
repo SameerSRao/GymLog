@@ -407,6 +407,12 @@
 
   <button class="btn-add-exercise" onclick="addExercise()">+ Add Exercise</button>
   <textarea id="workout-notes-input" class="notes-textarea" placeholder="Notes (optional)" rows="3"></textarea>
+  <button
+    class="btn-new-exercise"
+    id="saveRoutineBtn"
+    style="display:none; width:100%; margin-bottom:12px;"
+    onclick="saveAsRoutine()"
+  >Save as Routine</button>
   <button class="btn-submit" id="submitBtn" onclick="submitWorkout()">Log Workout</button>
   <div id="last-workout-link" style="text-align:center;margin-top:14px;font-size:0.88rem;"></div>
 
@@ -636,6 +642,13 @@
 
     // ── Exercise blocks ──────────────────────────────────────────────────────
 
+    function updateSaveRoutineBtn() {
+      const hasBlocks =
+        document.querySelectorAll('#exercises .exercise-block').length > 0;
+      document.getElementById('saveRoutineBtn').style.display =
+        hasBlocks ? 'block' : 'none';
+    }
+
     function addExercise() {
       const id = exerciseCount++;
       const div = document.createElement('div');
@@ -681,11 +694,13 @@
       `;
       document.getElementById('exercises').appendChild(div);
       addSet(id);
+      updateSaveRoutineBtn();
       return id;
     }
 
     function removeExercise(id) {
       document.getElementById(`exercise-${id}`).remove();
+      updateSaveRoutineBtn();
     }
 
     let setCounts = {};
@@ -790,8 +805,59 @@
           selectExercise(id, ex.name);
           for (let i = 1; i < ex.num_sets; i++) addSet(id);  // remaining sets
         }
+        updateSaveRoutineBtn();
       } catch (e) {
         showToast('Failed to load routine', 'error');
+        updateSaveRoutineBtn();
+      }
+    }
+
+    async function saveAsRoutine() {
+      const blocks = [
+        ...document.querySelectorAll('#exercises .exercise-block')
+      ];
+
+      for (const block of blocks) {
+        const id = block.id.replace('exercise-', '');
+        const inp = document.getElementById(`name-${id}`);
+        if (inp && inp.value.trim() && !inp.dataset.exerciseId) {
+          showToast(
+            'Select all exercises from the list before saving as a routine',
+            'error'
+          );
+          return;
+        }
+      }
+
+      const name = window.prompt('Routine name:');
+      if (!name || !name.trim()) return;
+      const trimmed = name.trim();
+
+      const exercises = blocks.map((block, i) => {
+        const id = block.id.replace('exercise-', '');
+        const inp = document.getElementById(`name-${id}`);
+        const numSets = document.querySelectorAll(`#sets-${id} tr`).length;
+        return {
+          exercise_id: parseInt(inp.dataset.exerciseId),
+          position: i + 1,
+          num_sets: numSets,
+        };
+      });
+
+      try {
+        const res = await fetch('/api/routines', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: trimmed, exercises }),
+        });
+        if (res.status === 409) {
+          showToast(`A routine named "${trimmed}" already exists`, 'error');
+          return;
+        }
+        if (!res.ok) throw new Error();
+        showToast(`"${trimmed}" saved as routine`, 'success');
+      } catch {
+        showToast('Failed to save routine', 'error');
       }
     }
 
