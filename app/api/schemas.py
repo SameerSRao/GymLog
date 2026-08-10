@@ -3,6 +3,19 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class LoginRequest(BaseModel):
+    """Request schema for the login endpoint."""
+
+    password: str
+
+
+class TokenResponse(BaseModel):
+    """Response schema returned after a successful login."""
+
+    access_token: str
+    token_type: str
+
+
 class MuscleGroupSchema(BaseModel):
     """Response schema for a muscle group."""
 

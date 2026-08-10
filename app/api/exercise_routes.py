@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
+from app.api.auth_routes import get_current_user
+
 from app.api.schemas import (
     CreateExerciseSchema,
     ExerciseDefSchema,
@@ -21,7 +23,7 @@ from app.services.exercise_service import (
     update_exercise,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_current_user)])
 
 
 @router.get("/muscle-groups", response_model=list[MuscleGroupSchema])

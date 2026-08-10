@@ -225,7 +225,9 @@
     <div id="recent-list"></div>
   </div>
 
+  <script src="/static/auth.js"></script>
   <script>
+    checkAuth();
     let allSessions = [];
     let dateMap = {};  // "YYYY-MM-DD" → [session, ...]
     let viewYear, viewMonth;
@@ -370,7 +372,7 @@
     });
 
     async function init() {
-      const res = await fetch('/api/workouts');
+      const res = await authFetch('/api/workouts');
       allSessions = await res.json();
       buildDateMap();
 

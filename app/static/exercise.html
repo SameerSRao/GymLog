@@ -418,7 +418,9 @@
     <div id="sessions"></div>
   </div>
 
+  <script src="/static/auth.js"></script>
   <script>
+    checkAuth();
     const exerciseId = window.location.pathname.split('/').filter(Boolean).pop();
 
     let currentView = 'weight';
@@ -498,9 +500,9 @@
 
     async function load() {
       const [infoRes, progRes, mgRes] = await Promise.all([
-        fetch(`/api/exercise/${exerciseId}/info`),
-        fetch(`/api/exercise/${exerciseId}/progression`),
-        fetch('/api/muscle-groups'),
+        authFetch(`/api/exercise/${exerciseId}/info`),
+        authFetch(`/api/exercise/${exerciseId}/progression`),
+        authFetch('/api/muscle-groups'),
       ]);
 
       if (!infoRes.ok) {
@@ -558,7 +560,7 @@
       saveBtn.textContent = 'Saving…';
 
       try {
-        const res = await fetch(`/api/exercise/${exerciseId}`, {
+        const res = await authFetch(`/api/exercise/${exerciseId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, equipment, instructions, muscle_group_ids }),
