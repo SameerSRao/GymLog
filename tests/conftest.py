@@ -10,6 +10,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.db.database import Base, get_db
 from app.main import app
+from app.model.models import ExerciseDef, MuscleGroup
 
 test_engine = create_engine(
     "sqlite:///:memory:",
@@ -17,6 +18,35 @@ test_engine = create_engine(
     poolclass=StaticPool,
 )
 TestSessionLocal = sessionmaker(bind=test_engine, autocommit=False, autoflush=False)
+
+
+def make_muscle_group(db, name="pectorals"):
+    """Insert a MuscleGroup into the test database and return it."""
+    mg = MuscleGroup(name=name)
+    db.add(mg)
+    db.commit()
+    db.refresh(mg)
+    return mg
+
+
+def make_exercise(
+    db,
+    name="Bench Press",
+    equipment="barbell",
+    instructions="Press the bar up",
+    muscle_groups=None,
+):
+    """Insert an ExerciseDef into the test database and return it."""
+    ex = ExerciseDef(
+        name=name,
+        equipment=equipment,
+        instructions=instructions,
+        muscle_groups=muscle_groups or [],
+    )
+    db.add(ex)
+    db.commit()
+    db.refresh(ex)
+    return ex
 
 
 @pytest.fixture(autouse=True)

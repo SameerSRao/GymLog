@@ -40,7 +40,7 @@ def _to_detail(routine: Routine) -> RoutineDetail:
 
 
 @router.post("/routines", response_model=RoutineDetail, status_code=201)
-def create_routine(data: RoutineCreate, db: Session = Depends(get_db)):
+def add_routine(data: RoutineCreate, db: Session = Depends(get_db)):
     """Create a new routine; 409 if name is already taken."""
     try:
         routine = create_routine(db, data)
