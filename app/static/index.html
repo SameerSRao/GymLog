@@ -805,8 +805,10 @@
           selectExercise(id, ex.name);
           for (let i = 1; i < ex.num_sets; i++) addSet(id);  // remaining sets
         }
+        updateSaveRoutineBtn();
       } catch (e) {
         showToast('Failed to load routine', 'error');
+        updateSaveRoutineBtn();
       }
     }
 
