@@ -16,14 +16,32 @@
       margin: 0 auto;
     }
 
-    .back-link {
-      display: inline-block;
-      color: #666;
-      font-size: 0.85rem;
-      text-decoration: none;
-      margin-bottom: 20px;
+    .site-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
     }
-    .back-link:hover { color: #aaa; }
+    .site-logo {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #f0f0f0;
+      text-decoration: none;
+      letter-spacing: 0.05em;
+    }
+    .site-logo:hover { color: #ccc; }
+    .site-nav { display: flex; gap: 8px; }
+    .site-nav a {
+      background: none;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #888;
+      font-size: 0.85rem;
+      padding: 7px 12px;
+      text-decoration: none;
+    }
+    .site-nav a:hover { border-color: #555; color: #ccc; }
+    .site-nav a.active { border-color: #555; color: #f0f0f0; }
 
     h1 { font-size: 1.6rem; font-weight: 700; }
 
@@ -370,7 +388,15 @@
   </style>
 </head>
 <body>
-  <a class="back-link" href="/">← GymLog</a>
+  <header class="site-header">
+    <a href="/" class="site-logo">GymLog</a>
+    <nav class="site-nav">
+      <a href="/workouts">History</a>
+      <a href="/exercises">Exercises</a>
+      <a href="/routines">Routines</a>
+    </nav>
+  </header>
+  <script>document.querySelectorAll('.site-nav a').forEach(a => { if (a.pathname === location.pathname) a.classList.add('active'); });</script>
 
   <div id="loading">Loading…</div>
   <div id="content" style="display:none">
