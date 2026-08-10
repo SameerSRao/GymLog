@@ -32,6 +32,12 @@ def exercises_page():
     return FileResponse("app/static/exercises.html", headers=NO_CACHE)
 
 
+@app.get("/routines")
+def routines_page():
+    """Serve the routines management page."""
+    return FileResponse("app/static/routines.html", headers=NO_CACHE)
+
+
 @app.get("/workout/{session_id}")
 def workout_page(session_id: int):
     """Serve the workout detail page for a given session."""

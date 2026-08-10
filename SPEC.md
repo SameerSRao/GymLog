@@ -118,6 +118,7 @@ GymLog/
 | `GET /workout/{id}` | Workout detail |
 | `GET /exercises` | Exercise browser — search, filter, edit, delete |
 | `GET /exercise/{id}` | Exercise info + progression |
+| `GET /routines` | Routine list — expand, edit, delete |
 
 ### JSON API (all under `/api`)
 
