@@ -52,7 +52,7 @@ This is the primary UI change for the app's home page.
 
 ### `search_exercises`
 
-```
+```text
 Input:  { query: string }
 Output: { matches: [{id, name, equipment}], count: int }
 ```
@@ -63,7 +63,7 @@ Case-insensitive substring match against all exercise names. Returns top 20.
 
 ### `get_recent_workouts`
 
-```
+```text
 Input:  { days: int }
 Output: { workouts: [{session_id, date, exercises: [name], total_sets}], count: int }
 ```
@@ -74,7 +74,7 @@ Filters all workouts to those logged within the last `days` days. Accesses `w.se
 
 ### `get_exercise_progression`
 
-```
+```text
 Input:  { exercise_name: string }
 Output: { exercise: string, sessions: [{date, sets, volume, best_set_weight}] }
         OR { error: string }
@@ -86,7 +86,7 @@ Fuzzy-matches exercise name, then delegates to existing `get_exercise_progressio
 
 ### `log_workout`
 
-```
+```text
 Input:  { exercises: [{exercise_name, sets: [{reps, weight_lbs?}]}], notes? }
 Output: { success: true, session_id, logged_at, exercises_logged }
         OR { error: string }
@@ -125,7 +125,7 @@ Layout (top to bottom):
 ## Environment Variables
 
 | Variable | Purpose |
-|---|---|
+| --- | --- |
 | `GROQ_API_KEY` | Groq API key for LLM calls |
 | `ANTHROPIC_API_KEY` | Not used — Groq replaces Anthropic |
 
