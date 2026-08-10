@@ -16,19 +16,32 @@
       margin: 0 auto;
     }
 
-    .page-nav {
+    .site-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 24px;
+      margin-bottom: 28px;
     }
-
-    .back-link {
-      color: #666;
+    .site-logo {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #f0f0f0;
+      text-decoration: none;
+      letter-spacing: 0.05em;
+    }
+    .site-logo:hover { color: #ccc; }
+    .site-nav { display: flex; gap: 8px; }
+    .site-nav a {
+      background: none;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #888;
       font-size: 0.85rem;
+      padding: 7px 12px;
       text-decoration: none;
     }
-    .back-link:hover { color: #aaa; }
+    .site-nav a:hover { border-color: #555; color: #ccc; }
+    .site-nav a.active { border-color: #555; color: #f0f0f0; }
 
     h1 { font-size: 1.2rem; font-weight: 600; margin-bottom: 20px; }
 
@@ -353,10 +366,15 @@
   </style>
 </head>
 <body>
-  <div class="page-nav">
-    <a class="back-link" href="/">← GymLog</a>
-    <a class="back-link" href="/log">Log Workout →</a>
-  </div>
+  <header class="site-header">
+    <a href="/" class="site-logo">GymLog</a>
+    <nav class="site-nav">
+      <a href="/workouts">History</a>
+      <a href="/exercises">Exercises</a>
+      <a href="/routines">Routines</a>
+    </nav>
+  </header>
+  <script>document.querySelectorAll('.site-nav a').forEach(a => { if (a.pathname === location.pathname) a.classList.add('active'); });</script>
 
   <h1>Routines</h1>
 
