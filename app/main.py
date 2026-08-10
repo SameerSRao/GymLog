@@ -16,7 +16,11 @@ if not os.getenv("TESTING"):
     with SessionLocal() as db:
         seed_exercises(db)
 
-app = FastAPI()
+_dev = os.getenv("ENVIRONMENT") == "development"
+app = FastAPI(
+    docs_url="/docs" if _dev else None,
+    redoc_url="/redoc" if _dev else None,
+)
 
 NO_CACHE = {"Cache-Control": "no-cache"}
 
