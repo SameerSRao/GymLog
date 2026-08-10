@@ -1,5 +1,3 @@
-import pytest
-
 from app.model.models import RoutineExercise
 
 from conftest import make_exercise
@@ -70,13 +68,6 @@ def test_create_routine_missing_name(client):
     assert r.status_code == 422
 
 
-@pytest.mark.skip(
-    reason=(
-        "exercise_id validation is not implemented — the design spec "
-        "defers to FK constraints, and SQLite does not enforce FK "
-        "constraints in the in-memory test environment."
-    )
-)
 def test_create_routine_invalid_exercise_id(client):
     """Assert POST /api/routines rejects non-existent exercise_id."""
     r = client.post("/api/routines", json={

@@ -9,7 +9,7 @@ from app.api.schemas import (
     RoutineUpdate,
 )
 from app.db.database import get_db
-from app.model.models import Routine
+from app.model.models import ExerciseDef, Routine
 from app.services.routine_service import (
     create_routine,
     delete_routine,
@@ -19,6 +19,20 @@ from app.services.routine_service import (
 )
 
 router = APIRouter()
+
+
+def _validate_exercise_ids(
+    db: Session, exercises: list
+) -> list[int]:
+    """Return a list of exercise_ids from the request that do not exist."""
+    requested = {ex.exercise_id for ex in exercises}
+    found = {
+        row.id
+        for row in db.query(ExerciseDef).filter(
+            ExerciseDef.id.in_(requested)
+        ).all()
+    }
+    return [eid for eid in requested if eid not in found]
 
 
 def _to_detail(routine: Routine) -> RoutineDetail:
@@ -42,6 +56,12 @@ def _to_detail(routine: Routine) -> RoutineDetail:
 @router.post("/routines", response_model=RoutineDetail, status_code=201)
 def add_routine(data: RoutineCreate, db: Session = Depends(get_db)):
     """Create a new routine; 409 if name is already taken."""
+    invalid = _validate_exercise_ids(db, data.exercises)
+    if invalid:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid exercise ids: {invalid}",
+        )
     try:
         routine = create_routine(db, data)
     except ValueError as e:
@@ -85,8 +105,15 @@ def replace_routine(
 ):
     """Replace a routine's name and exercises.
 
-    Returns 404 if not found, 409 on name conflict.
+    Returns 404 if not found, 400 on invalid exercise id, 409 on name
+    conflict.
     """
+    invalid = _validate_exercise_ids(db, data.exercises)
+    if invalid:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid exercise ids: {invalid}",
+        )
     try:
         routine = update_routine(db, routine_id, data)
     except ValueError as e:
