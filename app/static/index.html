@@ -397,6 +397,12 @@
     <button class="btn-submit" style="margin-top:16px;" onclick="createExercise()">Create Exercise</button>
   </div>
 
+  <div id="routine-loader" style="display:none; margin-bottom:16px;">
+    <select id="routine-select" onchange="onRoutineChange(this)">
+      <option value="">Load Routine…</option>
+    </select>
+  </div>
+
   <div id="exercises"></div>
 
   <button class="btn-add-exercise" onclick="addExercise()">+ Add Exercise</button>
@@ -411,6 +417,7 @@
     let exerciseMap = {};
     let muscleGroups = [];
     let equipmentValues = [];
+    let allRoutines = [];
     const blockFilters = {}; // blockId → { muscles: Set, equipment: Set }
 
     function getBlockFilter(id) {
@@ -454,6 +461,22 @@
 
       } catch (e) {
         console.error('Failed to load exercises', e);
+      }
+
+      try {
+        const res = await fetch('/api/routines');
+        allRoutines = await res.json();
+        if (allRoutines.length > 0) {
+          const sel = document.getElementById('routine-select');
+          sel.innerHTML = '<option value="">Load Routine…</option>' +
+            allRoutines.map(r => {
+              const n = r.exercise_count;
+              return `<option value="${r.id}">${r.name} (${n} exercise${n !== 1 ? 's' : ''})</option>`;
+            }).join('');
+          document.getElementById('routine-loader').style.display = 'block';
+        }
+      } catch (e) {
+        console.error('Failed to load routines', e);
       }
 
       addExercise();
@@ -658,6 +681,7 @@
       `;
       document.getElementById('exercises').appendChild(div);
       addSet(id);
+      return id;
     }
 
     function removeExercise(id) {
@@ -720,6 +744,54 @@
         showToast(`"${created.name}" added`, 'success');
       } catch (e) {
         showToast(e.message || 'Error creating exercise', 'error');
+      }
+    }
+
+    // ── Load routine ─────────────────────────────────────────────────────────
+
+    async function onRoutineChange(sel) {
+      const routineId = sel.value;
+      if (!routineId) return;
+
+      const hasFilledExercises = [...document.querySelectorAll('#exercises .exercise-block')]
+        .some(block => {
+          const id = block.id.replace('exercise-', '');
+          const inp = document.getElementById(`name-${id}`);
+          return inp && inp.value.trim().length > 0;
+        });
+
+      if (hasFilledExercises &&
+          !confirm('Loading this routine will replace the current exercises. Continue?')) {
+        sel.value = '';
+        return;
+      }
+
+      await loadRoutine(parseInt(routineId));
+      sel.value = '';
+    }
+
+    async function loadRoutine(routineId) {
+      try {
+        const res = await fetch(`/api/routine/${routineId}`);
+        if (!res.ok) throw new Error('Not found');
+        const routine = await res.json();
+
+        document.getElementById('exercises').innerHTML = '';
+        exerciseCount = 0;
+        setCounts = {};
+
+        if (routine.exercises.length === 0) {
+          addExercise();
+          return;
+        }
+
+        for (const ex of routine.exercises) {
+          const id = addExercise();         // adds the block + 1 empty set
+          selectExercise(id, ex.name);
+          for (let i = 1; i < ex.num_sets; i++) addSet(id);  // remaining sets
+        }
+      } catch (e) {
+        showToast('Failed to load routine', 'error');
       }
     }
 
