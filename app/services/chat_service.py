@@ -1,279 +1,117 @@
 import json
 import os
-from datetime import datetime, timedelta, timezone
+import time
+from collections import Counter
+from pathlib import Path
 from typing import Generator
 
-from openai import OpenAI
+from google import genai
+from google.genai import types
 from sqlalchemy.orm import Session
 
-from app.api.schemas import ExerciseLogRequest, SetSchema, WorkoutRequest
-from app.services.exercise_service import (
-    get_all_exercises,
-    get_exercise_progression,
-)
-from app.services.workout_service import (
-    get_all_workouts,
-    log_workout as _log_workout,
-)
+from app.services.chat_tools import TOOLS, execute_tool
+from app.services.routine_service import get_all_routines
+from app.services.workout_service import get_all_workouts
 
-_client = OpenAI(
-    api_key=os.environ.get("GROQ_API_KEY", ""),
-    base_url="https://api.groq.com/openai/v1",
-)
+_client = genai.Client(api_key=os.environ.get("GOOGLE_API_KEY", ""))
+_MODEL = "gemini-3-flash-preview"
 
-_MODEL = "llama-3.3-70b-versatile"
+_CONTEXT_DIR = Path(__file__).parent.parent / "context"
+_SYSTEM_PROMPT = (_CONTEXT_DIR / "system_prompt.md").read_text()
+_KNOWLEDGE = (_CONTEXT_DIR / "knowledge.md").read_text()
 
-_SYSTEM = (
-    "You are GymBot, an AI assistant built into GymLog, a personal workout"
-    " tracker. You can help the user log workouts, review history, check"
-    " progression on specific exercises, and search exercises by name."
-    " When the user wants to log a workout, confirm the details first, then"
-    " call log_workout. Be concise and friendly. Use specific numbers when"
-    " reporting data."
-)
-
-_TOOLS = [
-    {
-        "type": "function",
-        "function": {
-            "name": "search_exercises",
-            "description": (
-                "Search exercises by name or keyword. Returns matching"
-                " exercise names and IDs."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "Search term, e.g. 'bench press'",
-                    }
-                },
-                "required": ["query"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_recent_workouts",
-            "description": "Get the user's recent workout sessions.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "days": {
-                        "type": "integer",
-                        "description": "Number of days to look back",
-                    }
-                },
-                "required": ["days"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_exercise_progression",
-            "description": (
-                "Get progression history (sets, volume, best weight) for"
-                " a specific exercise by name."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "exercise_name": {
-                        "type": "string",
-                        "description": "Name of the exercise",
-                    }
-                },
-                "required": ["exercise_name"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "log_workout",
-            "description": (
-                "Log a new workout session with exercises, sets, reps,"
-                " and weights. Only call after confirming details with user."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "exercises": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "exercise_name": {"type": "string"},
-                                "sets": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "reps": {"type": "integer"},
-                                            "weight_lbs": {
-                                                "type": "number",
-                                                "description": (
-                                                    "Weight in lbs;"
-                                                    " omit for bodyweight"
-                                                ),
-                                            },
-                                        },
-                                        "required": ["reps"],
-                                    },
-                                },
-                            },
-                            "required": ["exercise_name", "sets"],
-                        },
-                    },
-                    "notes": {
-                        "type": "string",
-                        "description": "Optional notes for the workout",
-                    },
-                },
-                "required": ["exercises"],
-            },
-        },
-    },
-]
+_MAX_HISTORY = 20
+_MAX_TOOL_ROUNDS = 10
 
 
-def _execute_tool(name: str, arguments: str, db: Session) -> str:
-    """Execute a tool call and return its result as a JSON string."""
-    inputs = json.loads(arguments)
+def _build_dynamic_context(db: Session) -> str:
+    """Return a short string summarising the user's data for the system prompt."""
+    workouts = get_all_workouts(db)
+    total = len(workouts)
 
-    if name == "search_exercises":
-        query = inputs["query"].lower()
-        exercises = get_all_exercises(db)
-        matches = [
-            {"id": e.id, "name": e.name, "equipment": e.equipment}
-            for e in exercises
-            if query in e.name.lower()
-        ][:20]
-        return json.dumps({"matches": matches, "count": len(matches)})
+    exercise_counts: Counter = Counter()
+    for w in workouts:
+        for s in w.sets:
+            exercise_counts[s.exercise_def.name] += 1
 
-    if name == "get_recent_workouts":
-        days = inputs.get("days", 7)
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-        workouts = get_all_workouts(db)
-        recent = []
-        for w in workouts:
-            logged = w.logged_at
-            if logged.tzinfo is None:
-                logged = logged.replace(tzinfo=timezone.utc)
-            if logged < cutoff:
-                continue
-            exercises_done = list({s.exercise_def.name for s in w.sets})
-            recent.append({
-                "session_id": w.id,
-                "date": w.logged_at.strftime("%Y-%m-%d"),
-                "exercises": exercises_done,
-                "total_sets": len(w.sets),
-            })
-        return json.dumps({"workouts": recent, "count": len(recent)})
+    top = [name for name, _ in exercise_counts.most_common(5)]
+    routines = get_all_routines(db)
+    routine_names = [r.name for r in routines]
+    last_logged = (
+        workouts[0].logged_at.strftime("%Y-%m-%d") if workouts else "never"
+    )
 
-    if name == "get_exercise_progression":
-        exercise_name = inputs["exercise_name"].lower()
-        all_ex = get_all_exercises(db)
-        match = next(
-            (e for e in all_ex if exercise_name in e.name.lower()), None
-        )
-        if not match:
-            return json.dumps({
-                "error": (
-                    f"No exercise found matching '{inputs['exercise_name']}'."
-                    " Try search_exercises first."
-                )
-            })
-        _, sessions = get_exercise_progression(db, match.id)
-        return json.dumps({
-            "exercise": match.name,
-            "sessions": [
-                {
-                    "date": s["logged_at"].strftime("%Y-%m-%d"),
-                    "sets": s["sets"],
-                    "volume": s["volume"],
-                    "best_set_weight": s["best_set_weight"],
-                }
-                for s in sessions[-10:]
-            ],
-        })
-
-    if name == "log_workout":
-        all_ex = get_all_exercises(db)
-        ex_by_name = {e.name.lower(): e for e in all_ex}
-
-        logged_exercises = []
-        not_found = []
-        for ex in inputs["exercises"]:
-            name_lower = ex["exercise_name"].lower()
-            match = ex_by_name.get(name_lower) or next(
-                (e for e in all_ex if name_lower in e.name.lower()), None
-            )
-            if not match:
-                not_found.append(ex["exercise_name"])
-                continue
-            sets = [
-                SetSchema(reps=s["reps"], weight_lbs=s.get("weight_lbs"))
-                for s in ex["sets"]
-            ]
-            logged_exercises.append(
-                ExerciseLogRequest(exercise_id=match.id, sets=sets)
-            )
-
-        if not_found:
-            return json.dumps({
-                "error": (
-                    f"Exercises not found: {', '.join(not_found)}."
-                    " Use search_exercises to find exact names."
-                )
-            })
-
-        req = WorkoutRequest(
-            exercises=logged_exercises,
-            notes=inputs.get("notes"),
-        )
-        session = _log_workout(db, req)
-        return json.dumps({
-            "success": True,
-            "session_id": session.id,
-            "logged_at": session.logged_at.isoformat(),
-            "exercises_logged": len(logged_exercises),
-        })
-
-    return json.dumps({"error": f"Unknown tool: {name}"})
+    lines = [
+        "## Your User's Training Data",
+        f"Total workouts logged: {total}",
+        f"Last workout: {last_logged}",
+    ]
+    if top:
+        lines.append(f"Most logged exercises: {', '.join(top)}")
+    if routine_names:
+        lines.append(f"Saved routines: {', '.join(routine_names)}")
+    return "\n".join(lines)
 
 
 def run_chat(
-    db: Session, messages: list[dict]
+    db: Session, messages: list[dict[str, str]]
 ) -> Generator[str, None, None]:
     """Run the agentic tool loop; yield text chunks for SSE streaming."""
-    loop_messages = [{"role": "system", "content": _SYSTEM}] + list(messages)
+    dynamic_context = _build_dynamic_context(db)
+    system_content = "\n\n".join([_SYSTEM_PROMPT, _KNOWLEDGE, dynamic_context])
 
-    while True:
-        response = _client.chat.completions.create(
-            model=_MODEL,
-            messages=loop_messages,
-            tools=_TOOLS,
-            tool_choice="auto",
+    recent = messages[-_MAX_HISTORY:]
+    contents: list[types.Content] = [
+        types.Content(
+            role="user" if m["role"] == "user" else "model",
+            parts=[types.Part.from_text(text=m["content"])],
         )
+        for m in recent
+    ]
 
-        choice = response.choices[0]
+    config = types.GenerateContentConfig(
+        system_instruction=system_content,
+        tools=[TOOLS],
+    )
 
-        if choice.finish_reason != "tool_calls":
-            yield choice.message.content or ""
+    for _ in range(_MAX_TOOL_ROUNDS):
+        for attempt in range(4):
+            try:
+                response = _client.models.generate_content(
+                    model=_MODEL,
+                    contents=contents,
+                    config=config,
+                )
+                break
+            except Exception as exc:
+                if "429" in str(exc) and attempt < 3:
+                    time.sleep(2 ** attempt)
+                    continue
+                raise
+
+        candidate = response.candidates[0]
+        func_calls = [
+            p.function_call
+            for p in candidate.content.parts
+            if p.function_call is not None
+        ]
+
+        if not func_calls:
+            yield response.text or ""
             break
 
-        # Append assistant message with tool_calls
-        loop_messages.append(choice.message)
+        contents.append(candidate.content)
 
-        # Execute each tool and append results
-        for tc in choice.message.tool_calls:
-            result = _execute_tool(tc.function.name, tc.function.arguments, db)
-            loop_messages.append({
-                "role": "tool",
-                "tool_call_id": tc.id,
-                "content": result,
-            })
+        result_parts = []
+        for fc in func_calls:
+            result = json.loads(execute_tool(fc.name, dict(fc.args), db))
+            result_parts.append(
+                types.Part.from_function_response(
+                    name=fc.name,
+                    response=result,
+                )
+            )
+
+        contents.append(types.Content(role="user", parts=result_parts))
+    else:
+        yield "Sorry, I wasn't able to complete that request. Please try again."
