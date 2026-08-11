@@ -24,9 +24,9 @@ _MAX_HISTORY = 20
 _MAX_TOOL_ROUNDS = 10
 
 
-def _build_dynamic_context(db: Session) -> str:
+def _build_dynamic_context(db: Session, user_id: int) -> str:
     """Return a short string summarising the user's data for the system prompt."""
-    workouts = get_all_workouts(db)
+    workouts = get_all_workouts(db, user_id)
     total = len(workouts)
 
     exercise_counts: Counter = Counter()
@@ -35,7 +35,7 @@ def _build_dynamic_context(db: Session) -> str:
             exercise_counts[s.exercise_def.name] += 1
 
     top = [name for name, _ in exercise_counts.most_common(5)]
-    routines = get_all_routines(db)
+    routines = get_all_routines(db, user_id)
     routine_names = [r.name for r in routines]
     last_logged = (
         workouts[0].logged_at.strftime("%Y-%m-%d") if workouts else "never"
@@ -54,10 +54,10 @@ def _build_dynamic_context(db: Session) -> str:
 
 
 def run_chat(
-    db: Session, messages: list[dict[str, str]]
+    db: Session, messages: list[dict[str, str]], user_id: int
 ) -> Generator[str, None, None]:
-    """Run the agentic tool loop; yield text chunks for SSE streaming."""
-    dynamic_context = _build_dynamic_context(db)
+    """Run the agentic tool loop for user_id; yield text chunks for SSE streaming."""
+    dynamic_context = _build_dynamic_context(db, user_id)
     system_content = "\n\n".join([_SYSTEM_PROMPT, _KNOWLEDGE, dynamic_context])
 
     recent = messages[-_MAX_HISTORY:]
@@ -104,7 +104,9 @@ def run_chat(
 
         result_parts = []
         for fc in func_calls:
-            result = json.loads(execute_tool(fc.name, dict(fc.args), db))
+            result = json.loads(
+                execute_tool(fc.name, dict(fc.args), db, user_id)
+            )
             result_parts.append(
                 types.Part.from_function_response(
                     name=fc.name,
