@@ -4,14 +4,19 @@ from app.api.schemas import RoutineCreate, RoutineUpdate
 from app.model.models import Routine, RoutineExercise
 
 
-def create_routine(db: Session, data: RoutineCreate) -> Routine:
-    """Create a new routine.
+def create_routine(
+    db: Session, data: RoutineCreate, user_id: int
+) -> Routine:
+    """Create a new routine for user_id.
 
-    Raises ValueError('name_conflict') if the name is already taken.
+    Raises ValueError('name_conflict') if a routine with that name
+    already belongs to the same user.
     """
-    if db.query(Routine).filter(Routine.name == data.name).first():
+    if db.query(Routine).filter(
+        Routine.name == data.name, Routine.user_id == user_id
+    ).first():
         raise ValueError("name_conflict")
-    routine = Routine(name=data.name)
+    routine = Routine(name=data.name, user_id=user_id)
     db.add(routine)
     db.flush()
     for ex in data.exercises:
@@ -26,18 +31,21 @@ def create_routine(db: Session, data: RoutineCreate) -> Routine:
     return routine
 
 
-def get_all_routines(db: Session) -> list[Routine]:
-    """Return all routines with exercises eager-loaded, ordered by name."""
+def get_all_routines(db: Session, user_id: int) -> list[Routine]:
+    """Return all routines for user_id with exercises eager-loaded, by name."""
     return (
         db.query(Routine)
         .options(joinedload(Routine.exercises))
+        .filter(Routine.user_id == user_id)
         .order_by(Routine.name)
         .all()
     )
 
 
-def get_routine(db: Session, routine_id: int) -> Routine | None:
-    """Return a routine by ID with exercise definitions loaded, or None."""
+def get_routine(
+    db: Session, routine_id: int, user_id: int
+) -> Routine | None:
+    """Return a routine owned by user_id with exercise definitions loaded, or None."""
     return (
         db.query(Routine)
         .options(
@@ -45,27 +53,31 @@ def get_routine(db: Session, routine_id: int) -> Routine | None:
                 RoutineExercise.exercise_def
             )
         )
-        .filter(Routine.id == routine_id)
+        .filter(Routine.id == routine_id, Routine.user_id == user_id)
         .first()
     )
 
 
 def update_routine(
-    db: Session, routine_id: int, data: RoutineUpdate
+    db: Session, routine_id: int, data: RoutineUpdate, user_id: int
 ) -> Routine | None:
-    """Replace a routine's name and exercises; returns None if not found.
+    """Replace a routine's name and exercises for user_id; returns None if not found.
 
     Raises ValueError('name_conflict') if the new name is taken by another
-    routine.
+    routine belonging to the same user.
     """
-    routine = db.query(Routine).filter(Routine.id == routine_id).first()
-    if not routine:
-        return None
-    conflict = (
+    routine = (
         db.query(Routine)
-        .filter(Routine.name == data.name, Routine.id != routine_id)
+        .filter(Routine.id == routine_id, Routine.user_id == user_id)
         .first()
     )
+    if not routine:
+        return None
+    conflict = db.query(Routine).filter(
+        Routine.name == data.name,
+        Routine.id != routine_id,
+        Routine.user_id == user_id,
+    ).first()
     if conflict:
         raise ValueError("name_conflict")
     routine.name = data.name
@@ -84,9 +96,15 @@ def update_routine(
     return routine
 
 
-def delete_routine(db: Session, routine_id: int) -> bool:
-    """Delete a routine and its exercise slots; returns False if not found."""
-    routine = db.query(Routine).filter(Routine.id == routine_id).first()
+def delete_routine(
+    db: Session, routine_id: int, user_id: int
+) -> bool:
+    """Delete a routine owned by user_id; returns False if not found."""
+    routine = (
+        db.query(Routine)
+        .filter(Routine.id == routine_id, Routine.user_id == user_id)
+        .first()
+    )
     if not routine:
         return False
     db.delete(routine)
