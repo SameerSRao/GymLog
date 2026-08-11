@@ -246,3 +246,40 @@ def test_delete_workout_cascades_sets(client, db):
     client.delete(f"/api/workout/{session_id}")
     count = db.query(Exercise).filter(Exercise.session_id == session_id).count()
     assert count == 0
+
+
+def test_workouts_scoped_to_user(db):
+    """Assert a user only sees their own workouts, not another user's."""
+    from conftest import make_user, make_exercise
+    from app.api.auth_routes import get_current_user
+    from app.db.database import get_db
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    user_a = make_user(db, username="alice")
+    user_b = make_user(db, username="bob")
+    ex = make_exercise(db, name="Curl")
+
+    def db_override():
+        """Yield the shared test db session."""
+        yield db
+
+    app.dependency_overrides[get_db] = db_override
+    app.dependency_overrides[get_current_user] = lambda: {
+        "sub": str(user_a.id), "username": "alice",
+        "is_admin": False, "is_premium": True,
+    }
+    with TestClient(app) as ca:
+        ca.post("/api/workouts", json={
+            "exercises": [{"exercise_id": ex.id, "sets": [{"reps": 5}]}]
+        })
+        assert len(ca.get("/api/workouts").json()) == 1
+
+    app.dependency_overrides[get_current_user] = lambda: {
+        "sub": str(user_b.id), "username": "bob",
+        "is_admin": False, "is_premium": True,
+    }
+    with TestClient(app) as cb:
+        assert len(cb.get("/api/workouts").json()) == 0
+
+    app.dependency_overrides.clear()

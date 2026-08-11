@@ -17,9 +17,14 @@ router = APIRouter(dependencies=[Depends(get_current_user)])
 
 
 @router.post("/workouts", response_model=WorkoutResponse)
-def create_workout(workout: WorkoutRequest, db: Session = Depends(get_db)):
-    """Log a new workout session and return a summary of what was recorded."""
-    session = log_workout(db, workout)
+def create_workout(
+    workout: WorkoutRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Log a new workout session and return a summary."""
+    user_id = int(current_user["sub"])
+    session = log_workout(db, workout, user_id)
     return WorkoutResponse(
         session_id=session.id,
         logged_at=session.logged_at,
@@ -29,9 +34,13 @@ def create_workout(workout: WorkoutRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/workouts", response_model=list[WorkoutResponse])
-def list_workouts(db: Session = Depends(get_db)):
-    """Return all workout sessions ordered by date descending."""
-    sessions = get_all_workouts(db)
+def list_workouts(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Return all workout sessions for the current user, newest first."""
+    user_id = int(current_user["sub"])
+    sessions = get_all_workouts(db, user_id)
     return [
         WorkoutResponse(
             session_id=s.id,
@@ -44,9 +53,13 @@ def list_workouts(db: Session = Depends(get_db)):
 
 
 @router.get("/workout/{session_id}", response_model=WorkoutDetailed)
-def fetch_workout(session_id: int, db: Session = Depends(get_db)):
-    """Return full detail for a single workout session; 404 if not found."""
-    session = get_workout(db, session_id)
+def fetch_workout(
+    session_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Return full detail for a single workout; 404 if not found or not owned."""
+    session = get_workout(db, session_id, int(current_user["sub"]))
     if session is None:
         raise HTTPException(status_code=404, detail="Workout not found")
     return WorkoutDetailed(**build_workout_detailed(db, session))
@@ -57,17 +70,24 @@ def replace_workout(
     session_id: int,
     workout: WorkoutRequest,
     db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
-    """Replace all exercises in a workout session; 404 if not found."""
-    session = update_workout(db, session_id, workout)
+    """Replace all exercises in a workout; 404 if not found or not owned."""
+    session = update_workout(
+        db, session_id, workout, int(current_user["sub"])
+    )
     if session is None:
         raise HTTPException(status_code=404, detail="Workout not found")
     return WorkoutDetailed(**build_workout_detailed(db, session))
 
 
 @router.delete("/workout/{session_id}")
-def remove_workout(session_id: int, db: Session = Depends(get_db)):
-    """Delete a workout session and all its sets; 404 if not found."""
-    if not delete_workout(db, session_id):
+def remove_workout(
+    session_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Delete a workout and all its sets; 404 if not found or not owned."""
+    if not delete_workout(db, session_id, int(current_user["sub"])):
         raise HTTPException(status_code=404, detail="Workout not found")
     return {"deleted": session_id}
