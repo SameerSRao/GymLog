@@ -43,6 +43,24 @@
     .site-nav a:hover { border-color: #555; color: #ccc; }
     .site-nav a.active { border-color: #555; color: #f0f0f0; }
 
+    .nav-user {
+      font-size: 0.8rem;
+      color: #555;
+      align-self: center;
+      margin-right: 4px;
+    }
+    .nav-user .badge-admin {
+      display: inline-block;
+      background: #c0a020;
+      color: #0f0f0f;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 4px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
     h1 { font-size: 1.4rem; letter-spacing: 0.05em; margin-bottom: 20px; }
 
     .btn-secondary {
@@ -337,6 +355,7 @@
   <header class="site-header">
     <a href="/" class="site-logo">GymLog</a>
     <nav class="site-nav">
+      <span class="nav-user" id="nav-username"></span>
       <a href="/workouts">History</a>
       <a href="/exercises">Exercises</a>
       <a href="/routines">Routines</a>
@@ -392,6 +411,21 @@
   <script src="/static/auth.js"></script>
   <script>
     checkAuth();
+
+    /* ── Nav username ───────────────────────────────────────────── */
+    (function () {
+      var name = getUsername();
+      if (!name) return;
+      var span = document.getElementById('nav-username');
+      span.textContent = name;
+      if (isAdmin()) {
+        var badge = document.createElement('span');
+        badge.className = 'badge-admin';
+        badge.textContent = 'admin';
+        span.appendChild(badge);
+      }
+    })();
+
     let allExercises = [];
     let muscleGroups = [];
     let equipmentValues = [];
@@ -426,6 +460,10 @@
       return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    function canEditExercise(ex) {
+      return isAdmin() || (ex.user_id !== null && ex.user_id === getCurrentUserId());
+    }
+
     function renderRow(ex) {
       const equipTag = ex.equipment
         ? `<span class="tag tag-equipment">${escHtml(ex.equipment)}</span>`
@@ -433,16 +471,19 @@
       const muscleTags = ex.muscle_groups.slice(0, 3)
         .map(mg => `<span class="tag tag-muscle">${escHtml(mg.name)}</span>`)
         .join('');
+      const actions = canEditExercise(ex)
+        ? `<div class="ex-row-actions">
+            <button class="btn-edit" onclick="openEdit(${ex.id})">Edit</button>
+            <button class="btn-delete-row" onclick="confirmDeleteExercise(${ex.id})">Delete</button>
+          </div>`
+        : '';
       return `<div class="ex-row" id="row-${ex.id}">
         <div class="ex-row-main">
           <a class="ex-row-link" href="/exercise/${ex.id}">
             <div class="ex-row-name">${escHtml(ex.name)}</div>
             <div class="ex-row-tags">${equipTag}${muscleTags}</div>
           </a>
-          <div class="ex-row-actions">
-            <button class="btn-edit" onclick="openEdit(${ex.id})">Edit</button>
-            <button class="btn-delete-row" onclick="confirmDeleteExercise(${ex.id})">Delete</button>
-          </div>
+          ${actions}
         </div>
       </div>`;
     }

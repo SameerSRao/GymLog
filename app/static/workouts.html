@@ -43,6 +43,24 @@
     .site-nav a:hover { border-color: #555; color: #ccc; }
     .site-nav a.active { border-color: #555; color: #f0f0f0; }
 
+    .nav-user {
+      font-size: 0.8rem;
+      color: #555;
+      align-self: center;
+      margin-right: 4px;
+    }
+    .nav-user .badge-admin {
+      display: inline-block;
+      background: #c0a020;
+      color: #0f0f0f;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 4px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
     .cal-header {
       display: flex;
       justify-content: space-between;
@@ -197,6 +215,7 @@
   <header class="site-header">
     <a href="/" class="site-logo">GymLog</a>
     <nav class="site-nav">
+      <span class="nav-user" id="nav-username"></span>
       <a href="/workouts">History</a>
       <a href="/exercises">Exercises</a>
       <a href="/routines">Routines</a>
@@ -228,6 +247,11 @@
   <script src="/static/auth.js"></script>
   <script>
     checkAuth();
+    (function () {
+      var name = getUsername(); if (!name) return;
+      var span = document.getElementById('nav-username'); span.textContent = name;
+      if (isAdmin()) { var b = document.createElement('span'); b.className = 'badge-admin'; b.textContent = 'admin'; span.appendChild(b); }
+    })();
     let allSessions = [];
     let dateMap = {};  // "YYYY-MM-DD" → [session, ...]
     let viewYear, viewMonth;

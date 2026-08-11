@@ -43,6 +43,42 @@
     .site-nav a:hover { border-color: #555; color: #ccc; }
     .site-nav a.active { border-color: #555; color: #f0f0f0; }
 
+    .nav-user {
+      font-size: 0.8rem;
+      color: #555;
+      align-self: center;
+      margin-right: 4px;
+    }
+    .nav-user .badge-admin {
+      display: inline-block;
+      background: #c0a020;
+      color: #0f0f0f;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 4px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
+    .chat-locked {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 460px;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      color: #555;
+      font-size: 0.9rem;
+      text-align: center;
+      gap: 8px;
+    }
+    .chat-locked .lock-icon { font-size: 2rem; }
+    .chat-locked p { max-width: 260px; line-height: 1.5; }
+
     /* Stats */
     .stats-bar {
       display: flex;
@@ -198,6 +234,7 @@
   <header class="site-header">
     <a href="/" class="site-logo">GymLog</a>
     <nav class="site-nav">
+      <span class="nav-user" id="nav-username"></span>
       <a href="/workouts">History</a>
       <a href="/exercises">Exercises</a>
       <a href="/routines">Routines</a>
@@ -238,6 +275,29 @@
   <script src="/static/auth.js"></script>
   <script>
     checkAuth();
+
+    /* ── Nav username ───────────────────────────────────────────── */
+    (function () {
+      var name = getUsername();
+      if (!name) return;
+      var span = document.getElementById('nav-username');
+      span.textContent = name;
+      if (isAdmin()) {
+        var badge = document.createElement('span');
+        badge.className = 'badge-admin';
+        badge.textContent = 'admin';
+        span.appendChild(badge);
+      }
+    })();
+
+    /* ── Chat premium gate ──────────────────────────────────────── */
+    if (!isPremium() && !isAdmin()) {
+      var chatWindow = document.querySelector('.chat-window');
+      var locked = document.createElement('div');
+      locked.className = 'chat-locked';
+      locked.innerHTML = '<div class="lock-icon">🔒</div><p>AI chat is available for premium members. Upgrade to unlock GymBot.</p>';
+      chatWindow.parentNode.replaceChild(locked, chatWindow);
+    }
 
     /* ── Stats ─────────────────────────────────────────────────── */
     function toLocalKey(d) {
