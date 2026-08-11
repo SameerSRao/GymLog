@@ -6,7 +6,16 @@ from pydantic import BaseModel
 class LoginRequest(BaseModel):
     """Request schema for the login endpoint."""
 
+    username: str
     password: str
+
+
+class RegisterRequest(BaseModel):
+    """Request schema for the register endpoint."""
+
+    username: str
+    password: str
+    signup_code: str
 
 
 class TokenResponse(BaseModel):
@@ -30,6 +39,7 @@ class ExerciseDefSchema(BaseModel):
     name: str
     equipment: str | None = None
     instructions: str | None = None
+    user_id: int | None = None
     muscle_groups: list[MuscleGroupSchema]
 
 

@@ -5,18 +5,12 @@ import bcrypt
 from fastapi import HTTPException
 from jose import JWTError, jwt
 
-_ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 _JWT_SECRET = os.environ.get("JWT_SECRET", "")
+_SIGNUP_CODE = os.environ.get("SIGNUP_CODE", "")
+_ALGORITHM = "HS256"
 
-if not _ADMIN_PASSWORD:
-    raise RuntimeError("ADMIN_PASSWORD environment variable is not set")
 if not _JWT_SECRET:
     raise RuntimeError("JWT_SECRET environment variable is not set")
-
-_ALGORITHM = "HS256"
-ADMIN_PASSWORD_HASH = bcrypt.hashpw(
-    _ADMIN_PASSWORD.encode(), bcrypt.gensalt()
-).decode()
 
 
 def hash_password(plain: str) -> str:
@@ -29,8 +23,13 @@ def verify_password(plain: str, hashed: str) -> bool:
     return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
+def check_signup_code(code: str) -> bool:
+    """Return True if code matches the SIGNUP_CODE env var."""
+    return bool(_SIGNUP_CODE) and code == _SIGNUP_CODE
+
+
 def create_access_token(data: dict, expires_delta: timedelta) -> str:
-    """Return a signed JWT encoding data with an expiry of now + expires_delta."""
+    """Return a signed JWT encoding data with expiry now + expires_delta."""
     to_encode = data.copy()
     to_encode["exp"] = datetime.now(timezone.utc) + expires_delta
     return jwt.encode(to_encode, _JWT_SECRET, algorithm=_ALGORITHM)

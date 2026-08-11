@@ -68,6 +68,12 @@ def login_page():
     return FileResponse("app/static/login.html", headers=NO_CACHE)
 
 
+@app.get("/register")
+def register_page():
+    """Serve the registration page."""
+    return FileResponse("app/static/register.html", headers=NO_CACHE)
+
+
 @app.get("/")
 def index():
     """Serve the dashboard page."""
