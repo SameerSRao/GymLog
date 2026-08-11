@@ -13,6 +13,8 @@ Personal gym workout tracker. Form-based web UI for logging workouts, browsing h
 | DB (local) | SQLite via Docker volume |
 | DB (deploy) | Postgres — swap `DATABASE_URL` |
 | Server | Uvicorn |
+| AI | Google Gemini (`gemini-3-flash-preview`) via `google-genai` SDK |
+| Auth | JWT (HS256) via `python-jose`; passwords hashed with `bcrypt` |
 
 ---
 
@@ -27,6 +29,9 @@ GymLog/
 ├── data/                   ← SQLite db (volume mounted)
 └── app/
     ├── main.py             ← app setup, page routes, startup seed
+    ├── context/
+    │   ├── system_prompt.md  ← AI chatbot system prompt
+    │   └── knowledge.md      ← fitness knowledge injected into chat context
     ├── db/
     │   ├── database.py     ← engine, SessionLocal, Base, get_db()
     │   └── seed.py         ← seeds exercises + muscle groups from exercises.json
@@ -34,16 +39,28 @@ GymLog/
     │   └── models.py       ← ORM models
     ├── services/
     │   ├── workout_service.py
-    │   └── exercise_service.py
+    │   ├── exercise_service.py
+    │   ├── routine_service.py
+    │   ├── auth_service.py ← JWT creation/validation, bcrypt password hashing
+    │   ├── chat_service.py ← Gemini agentic loop with SSE streaming
+    │   └── chat_tools.py   ← tool declarations + dispatch (search, log, progression)
     ├── api/
-    │   ├── routes.py       ← workout route handlers
+    │   ├── workout_routes.py
     │   ├── exercise_routes.py
+    │   ├── routine_routes.py
+    │   ├── auth_routes.py  ← POST /api/auth/login, get_current_user dependency
+    │   ├── chat_routes.py  ← POST /api/chat SSE endpoint
     │   └── schemas.py      ← Pydantic request/response models
     └── static/
+        ├── dashboard.html  ← home dashboard
+        ├── login.html      ← login page
         ├── index.html      ← log workout page
         ├── workouts.html   ← calendar view
         ├── workout.html    ← single workout detail
-        └── exercise.html   ← exercise info + progression
+        ├── exercises.html  ← exercise browser (search, filter, edit, delete)
+        ├── exercise.html   ← exercise info + progression
+        ├── routines.html   ← routine list (expand, edit, delete)
+        └── auth.js         ← shared auth token helpers
 ```
 
 ---
@@ -113,6 +130,7 @@ GymLog/
 | Route | Page |
 |-------|------|
 | `GET /` | Dashboard |
+| `GET /login` | Login |
 | `GET /log` | Log workout |
 | `GET /workouts` | Calendar + recent list |
 | `GET /workout/{id}` | Workout detail |
@@ -121,6 +139,20 @@ GymLog/
 | `GET /routines` | Routine list — expand, edit, delete |
 
 ### JSON API (all under `/api`)
+
+#### Auth
+| Method | Route | Description |
+|--------|-------|-------------|
+| POST | `/api/auth/login` | Verify password; return a 30-day JWT on success, 401 on failure |
+
+All other `/api` routes require a `Authorization: Bearer <token>` header.
+
+#### Chat
+| Method | Route | Description |
+|--------|-------|-------------|
+| POST | `/api/chat` | Stream an AI response over SSE; client manages conversation history |
+
+The chat endpoint runs a Gemini agentic loop with up to 10 tool rounds. Available tools: `search_exercises`, `get_recent_workouts`, `get_exercise_progression`, `get_routines`, `log_workout`. The system prompt and fitness knowledge are injected from `app/context/`.
 
 #### Exercises
 | Method | Route | Description |
@@ -216,7 +248,17 @@ GymLog/
 
 ## Pages
 
-### `/` — Log Workout
+### `/` — Dashboard
+- Summary stats (total workouts, total sets, total volume)
+- Recent workouts list with date and exercise count
+- Quick links to log, workouts, exercises, routines
+- AI chat panel: send messages to the Gemini assistant; streams responses via SSE; history kept client-side per session
+
+### `/login` — Login
+- Password form; on success stores the JWT in `localStorage` and redirects to `/`
+- All other pages redirect here if no valid token is present
+
+### `/log` — Log Workout
 - Searchable exercise dropdown per block (token-based: "weighted dip" matches "weighted tricep dip")
 - Per-block multi-select filters for muscle group and equipment (with search + clear)
 - Tags show equipment + muscle groups on selection, with a link to the exercise's progression page
@@ -266,7 +308,6 @@ Seeding is idempotent — skipped if exercises already exist.
 | Personal records | No PR detection or highlighting |
 | Workout notes | No free-text notes per session |
 | Volume / rep trend charts | Progression page only charts best weight |
-| Auth / multi-user | Single user only |
-| Natural language input | Was in original spec, deprioritized |
+| Multi-user support | Single user (admin password) only |
 | SMS via Twilio | Was in original spec, deprioritized |
 | Weight tracking | Was in original spec, deprioritized |
