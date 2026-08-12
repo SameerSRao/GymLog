@@ -356,7 +356,13 @@
     }
 
     /* ── Chat ───────────────────────────────────────────────────── */
-    const history = []; // [{role, content}]
+    const CHAT_KEY = 'gymlog_chat_history';
+    const MAX_STORED = 40;
+    const history = JSON.parse(localStorage.getItem(CHAT_KEY) || '[]');
+
+    function saveHistory() {
+      localStorage.setItem(CHAT_KEY, JSON.stringify(history.slice(-MAX_STORED)));
+    }
 
     function appendMsg(role, text) {
       const el = document.createElement('div');
@@ -366,6 +372,9 @@
       el.scrollIntoView({ behavior: 'smooth', block: 'end' });
       return el;
     }
+
+    // Render persisted history on load
+    history.forEach(m => appendMsg(m.role, m.content));
 
     function showTyping() {
       const el = document.createElement('div');
@@ -386,6 +395,7 @@
       input.style.height = '';
       appendMsg('user', text);
       history.push({ role: 'user', content: text });
+      saveHistory();
 
       const sendBtn = document.getElementById('chat-send');
       sendBtn.disabled = true;
@@ -435,7 +445,7 @@
           }
         }
 
-        if (botText) history.push({ role: 'assistant', content: botText });
+        if (botText) { history.push({ role: 'assistant', content: botText }); saveHistory(); }
         // Refresh stats in case a workout was just logged
         loadStats();
       } catch (e) {
