@@ -200,6 +200,7 @@ class RoutineListItem(BaseModel):
     id: int
     name: str
     exercise_count: int
+    created_at: datetime
 
 
 class RoutineDetail(BaseModel):
