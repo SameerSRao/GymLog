@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from app.api.auth_routes import get_current_user
-
 from app.api.schemas import (
     CreateExerciseSchema,
     ExerciseDefSchema,
@@ -33,22 +32,28 @@ def list_muscle_groups(db: Session = Depends(get_db)):
 
 
 @router.get("/exercises", response_model=list[ExerciseDefSchema])
-def list_exercises(db: Session = Depends(get_db)):
-    """Return all exercise definitions in alphabetical order."""
-    return get_all_exercises(db)
+def list_exercises(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Return global exercises plus the caller's custom exercises."""
+    return get_all_exercises(db, int(current_user["sub"]))
 
 
 @router.post("/exercises", response_model=ExerciseDefSchema, status_code=201)
-def add_exercise(data: CreateExerciseSchema, db: Session = Depends(get_db)):
-    """Create a new exercise; returns 400 if any muscle group ID is invalid."""
-    muscle_groups = get_all_muscle_groups(db)
-    valid_ids = {mg.id for mg in muscle_groups}
+def add_exercise(
+    data: CreateExerciseSchema,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Create a custom exercise owned by the caller; 400 on invalid muscle group."""
+    valid_ids = {mg.id for mg in get_all_muscle_groups(db)}
     invalid = [i for i in data.muscle_group_ids if i not in valid_ids]
     if invalid:
         raise HTTPException(
             status_code=400, detail=f"Invalid muscle group ids: {invalid}"
         )
-    return create_exercise(db, data)
+    return create_exercise(db, data, int(current_user["sub"]))
 
 
 @router.get("/exercise/{exercise_id}/info", response_model=ExerciseDefSchema)
@@ -65,11 +70,11 @@ def edit_exercise(
     exercise_id: int,
     data: ExerciseUpdate,
     db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
-    """Partially update an exercise; 404 if not found, 409 on name conflict, 400 on invalid muscle group."""
+    """Partially update an exercise; 403 not permitted, 404 not found, 409 name conflict."""
     if data.muscle_group_ids is not None:
-        muscle_groups = get_all_muscle_groups(db)
-        valid_ids = {mg.id for mg in muscle_groups}
+        valid_ids = {mg.id for mg in get_all_muscle_groups(db)}
         invalid = [i for i in data.muscle_group_ids if i not in valid_ids]
         if invalid:
             raise HTTPException(
@@ -77,8 +82,16 @@ def edit_exercise(
                 detail=f"Invalid muscle group ids: {invalid}",
             )
     try:
-        exercise = update_exercise(db, exercise_id, data)
+        exercise = update_exercise(
+            db,
+            exercise_id,
+            data,
+            user_id=int(current_user["sub"]),
+            is_admin=current_user.get("is_admin", False),
+        )
     except ValueError as e:
+        if str(e) == "forbidden":
+            raise HTTPException(status_code=403, detail="Not permitted")
         if str(e) == "name_conflict":
             raise HTTPException(
                 status_code=409,
@@ -91,11 +104,22 @@ def edit_exercise(
 
 
 @router.delete("/exercise/{exercise_id}", status_code=204)
-def remove_exercise(exercise_id: int, db: Session = Depends(get_db)):
-    """Delete an exercise; 404 if not found, 409 if it has logged workout history."""
+def remove_exercise(
+    exercise_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Delete an exercise; 403 not permitted, 404 not found, 409 has history."""
     try:
-        found = delete_exercise(db, exercise_id)
+        found = delete_exercise(
+            db,
+            exercise_id,
+            user_id=int(current_user["sub"]),
+            is_admin=current_user.get("is_admin", False),
+        )
     except ValueError as e:
+        if str(e) == "forbidden":
+            raise HTTPException(status_code=403, detail="Not permitted")
         if str(e) == "has_history":
             raise HTTPException(
                 status_code=409,
@@ -111,9 +135,15 @@ def remove_exercise(exercise_id: int, db: Session = Depends(get_db)):
     "/exercise/{exercise_id}/progression",
     response_model=ExerciseProgressionSchema,
 )
-def get_progression(exercise_id: int, db: Session = Depends(get_db)):
-    """Return an exercise's progression history across all workout sessions; 404 if not found."""
-    exercise, sessions = get_exercise_progression(db, exercise_id)
+def get_progression(
+    exercise_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Return progression for caller's sessions with this exercise; 404 if not found."""
+    exercise, sessions = get_exercise_progression(
+        db, exercise_id, int(current_user["sub"])
+    )
     if exercise is None:
         raise HTTPException(status_code=404, detail="Exercise not found")
     return ExerciseProgressionSchema(

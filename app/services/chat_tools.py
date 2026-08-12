@@ -156,8 +156,8 @@ def _best_exercise_match(
     return sub_matches[0] if sub_matches else None
 
 
-def execute_tool(name: str, inputs: dict, db: Session) -> str:
-    """Dispatch a tool call by name and return the result as a JSON string."""
+def execute_tool(name: str, inputs: dict, db: Session, user_id: int) -> str:
+    """Dispatch a tool call by name for user_id; return the result as JSON."""
     if name == "search_exercises":
         query = inputs["query"].lower()
         exercises = _all_exercises_with_muscles(db)
@@ -177,7 +177,7 @@ def execute_tool(name: str, inputs: dict, db: Session) -> str:
     if name == "get_recent_workouts":
         days = inputs.get("days", 7)
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-        workouts = get_all_workouts(db)
+        workouts = get_all_workouts(db, user_id)
         recent = []
         for w in workouts:
             logged = w.logged_at
@@ -220,7 +220,7 @@ def execute_tool(name: str, inputs: dict, db: Session) -> str:
         best = None
         best_sessions: list = []
         for candidate in candidates[:5]:
-            _, sessions = get_exercise_progression(db, candidate.id)
+            _, sessions = get_exercise_progression(db, candidate.id, user_id)
             if len(sessions) > len(best_sessions):
                 best = candidate
                 best_sessions = sessions
@@ -256,6 +256,7 @@ def execute_tool(name: str, inputs: dict, db: Session) -> str:
                     RoutineExercise.exercise_def
                 )
             )
+            .filter(Routine.user_id == user_id)
             .order_by(Routine.name)
             .all()
         )
@@ -310,7 +311,7 @@ def execute_tool(name: str, inputs: dict, db: Session) -> str:
             exercises=logged_exercises,
             notes=inputs.get("notes"),
         )
-        session = _log_workout(db, req)
+        session = _log_workout(db, req, user_id)
         return json.dumps({
             "success": True,
             "session_id": session.id,

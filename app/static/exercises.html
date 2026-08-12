@@ -43,6 +43,35 @@
     .site-nav a:hover { border-color: #555; color: #ccc; }
     .site-nav a.active { border-color: #555; color: #f0f0f0; }
 
+    .nav-avatar { position: relative; display: none; align-items: center; }
+    .avatar-btn {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: #2a2a2a; border: 1px solid #444;
+      color: #f0f0f0; font-size: 0.85rem; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center;
+      justify-content: center; padding: 0; line-height: 1;
+    }
+    .avatar-btn:hover { border-color: #777; background: #333; }
+    .avatar-dropdown {
+      display: none; position: absolute; top: calc(100% + 8px); right: 0;
+      background: #1a1a1a; border: 1px solid #333; border-radius: 10px;
+      min-width: 160px; z-index: 300;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6); padding: 12px;
+    }
+    .avatar-dropdown.open { display: block; }
+    .avatar-dname { font-size: 0.88rem; font-weight: 600; color: #f0f0f0; margin-bottom: 8px; }
+    .avatar-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+    .avatar-badges:empty { display: none; }
+    .badge { font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+    .badge-admin { background: #c0a020; color: #0f0f0f; }
+    .badge-premium { background: #1a3a6a; color: #7aabff; border: 1px solid #2a4a8a; }
+    .btn-logout {
+      width: 100%; background: none; border: 1px solid #333;
+      border-radius: 6px; color: #888; font-size: 0.82rem;
+      padding: 7px; cursor: pointer; font-family: inherit;
+    }
+    .btn-logout:hover { border-color: #555; color: #ccc; }
+
     h1 { font-size: 1.4rem; letter-spacing: 0.05em; margin-bottom: 20px; }
 
     .btn-secondary {
@@ -340,6 +369,14 @@
       <a href="/workouts">History</a>
       <a href="/exercises">Exercises</a>
       <a href="/routines">Routines</a>
+      <div class="nav-avatar" id="nav-avatar">
+        <button class="avatar-btn" id="avatar-btn"></button>
+        <div class="avatar-dropdown" id="avatar-dropdown">
+          <div class="avatar-dname" id="avatar-dname"></div>
+          <div class="avatar-badges" id="avatar-badges"></div>
+          <button class="btn-logout" onclick="logout()">Log out</button>
+        </div>
+      </div>
     </nav>
   </header>
   <script>document.querySelectorAll('.site-nav a').forEach(a => { if (a.pathname === location.pathname) a.classList.add('active'); });</script>
@@ -392,6 +429,21 @@
   <script src="/static/auth.js"></script>
   <script>
     checkAuth();
+
+    (function () {
+      var name = getUsername(); if (!name) return;
+      document.getElementById('avatar-btn').textContent = name.charAt(0).toUpperCase();
+      document.getElementById('avatar-dname').textContent = name;
+      document.getElementById('nav-avatar').style.display = 'flex';
+      var badges = document.getElementById('avatar-badges');
+      if (isAdmin()) { var a = document.createElement('span'); a.className = 'badge badge-admin'; a.textContent = 'admin'; badges.appendChild(a); }
+      if (isPremium()) { var p = document.createElement('span'); p.className = 'badge badge-premium'; p.textContent = 'premium'; badges.appendChild(p); }
+      document.getElementById('avatar-btn').addEventListener('click', function(e) {
+        e.stopPropagation(); document.getElementById('avatar-dropdown').classList.toggle('open');
+      });
+      document.addEventListener('click', function() { document.getElementById('avatar-dropdown').classList.remove('open'); });
+    })();
+
     let allExercises = [];
     let muscleGroups = [];
     let equipmentValues = [];
@@ -426,6 +478,10 @@
       return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    function canEditExercise(ex) {
+      return isAdmin() || (ex.user_id !== null && ex.user_id === getCurrentUserId());
+    }
+
     function renderRow(ex) {
       const equipTag = ex.equipment
         ? `<span class="tag tag-equipment">${escHtml(ex.equipment)}</span>`
@@ -433,16 +489,19 @@
       const muscleTags = ex.muscle_groups.slice(0, 3)
         .map(mg => `<span class="tag tag-muscle">${escHtml(mg.name)}</span>`)
         .join('');
+      const actions = canEditExercise(ex)
+        ? `<div class="ex-row-actions">
+            <button class="btn-edit" onclick="openEdit(${ex.id})">Edit</button>
+            <button class="btn-delete-row" onclick="confirmDeleteExercise(${ex.id})">Delete</button>
+          </div>`
+        : '';
       return `<div class="ex-row" id="row-${ex.id}">
         <div class="ex-row-main">
           <a class="ex-row-link" href="/exercise/${ex.id}">
             <div class="ex-row-name">${escHtml(ex.name)}</div>
             <div class="ex-row-tags">${equipTag}${muscleTags}</div>
           </a>
-          <div class="ex-row-actions">
-            <button class="btn-edit" onclick="openEdit(${ex.id})">Edit</button>
-            <button class="btn-delete-row" onclick="confirmDeleteExercise(${ex.id})">Delete</button>
-          </div>
+          ${actions}
         </div>
       </div>`;
     }

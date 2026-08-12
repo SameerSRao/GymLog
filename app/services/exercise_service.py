@@ -6,9 +6,17 @@ from app.api.schemas import CreateExerciseSchema, ExerciseUpdate
 from app.model.models import Exercise, ExerciseDef, MuscleGroup, Workout
 
 
-def get_all_exercises(db: Session) -> list[ExerciseDef]:
-    """Return all exercises ordered alphabetically by name."""
-    return db.query(ExerciseDef).order_by(ExerciseDef.name).all()
+def get_all_exercises(db: Session, user_id: int) -> list[ExerciseDef]:
+    """Return global exercises plus caller's custom exercises, alphabetically."""
+    return (
+        db.query(ExerciseDef)
+        .filter(
+            (ExerciseDef.user_id.is_(None)) |
+            (ExerciseDef.user_id == user_id)
+        )
+        .order_by(ExerciseDef.name)
+        .all()
+    )
 
 
 def get_exercise(db: Session, exercise_id: int) -> ExerciseDef | None:
@@ -23,8 +31,10 @@ def get_all_muscle_groups(db: Session) -> list[MuscleGroup]:
     return db.query(MuscleGroup).order_by(MuscleGroup.name).all()
 
 
-def create_exercise(db: Session, data: CreateExerciseSchema) -> ExerciseDef:
-    """Create and persist a new exercise with the given muscle groups."""
+def create_exercise(
+    db: Session, data: CreateExerciseSchema, user_id: int
+) -> ExerciseDef:
+    """Create and persist a new custom exercise owned by user_id."""
     muscle_groups = (
         db.query(MuscleGroup)
         .filter(MuscleGroup.id.in_(data.muscle_group_ids))
@@ -35,6 +45,7 @@ def create_exercise(db: Session, data: CreateExerciseSchema) -> ExerciseDef:
         equipment=data.equipment,
         instructions=data.instructions,
         muscle_groups=muscle_groups,
+        user_id=user_id,
     )
     db.add(exercise)
     db.commit()
@@ -43,12 +54,16 @@ def create_exercise(db: Session, data: CreateExerciseSchema) -> ExerciseDef:
 
 
 def update_exercise(
-    db: Session, exercise_id: int, data: ExerciseUpdate
+    db: Session,
+    exercise_id: int,
+    data: ExerciseUpdate,
+    user_id: int,
+    is_admin: bool = False,
 ) -> ExerciseDef | None:
     """Partially update an exercise; returns None if not found.
 
-    Raises ValueError('name_conflict') if the new name is already taken by
-    another exercise.
+    Raises ValueError('forbidden') if the caller lacks permission.
+    Raises ValueError('name_conflict') if the new name is taken in the same scope.
     """
     exercise = (
         db.query(ExerciseDef).filter(ExerciseDef.id == exercise_id).first()
@@ -56,10 +71,20 @@ def update_exercise(
     if not exercise:
         return None
 
+    if exercise.user_id is None and not is_admin:
+        raise ValueError("forbidden")
+    if (
+        exercise.user_id is not None
+        and exercise.user_id != user_id
+        and not is_admin
+    ):
+        raise ValueError("forbidden")
+
     if data.name is not None and data.name != exercise.name:
         conflict = db.query(ExerciseDef).filter(
             ExerciseDef.name == data.name,
             ExerciseDef.id != exercise_id,
+            ExerciseDef.user_id == exercise.user_id,
         ).first()
         if conflict:
             raise ValueError("name_conflict")
@@ -69,7 +94,6 @@ def update_exercise(
         exercise.equipment = data.equipment
     if data.instructions is not None:
         exercise.instructions = data.instructions
-
     if data.muscle_group_ids is not None:
         exercise.muscle_groups = (
             db.query(MuscleGroup)
@@ -82,9 +106,15 @@ def update_exercise(
     return exercise
 
 
-def delete_exercise(db: Session, exercise_id: int) -> bool:
+def delete_exercise(
+    db: Session,
+    exercise_id: int,
+    user_id: int,
+    is_admin: bool = False,
+) -> bool:
     """Delete an exercise; returns False if not found.
 
+    Raises ValueError('forbidden') if the caller lacks permission.
     Raises ValueError('has_history') if the exercise has logged sets.
     """
     exercise = (
@@ -93,10 +123,18 @@ def delete_exercise(db: Session, exercise_id: int) -> bool:
     if not exercise:
         return False
 
-    has_sets = (
-        db.query(Exercise).filter(Exercise.exercise_id == exercise_id).first()
-    )
-    if has_sets:
+    if exercise.user_id is None and not is_admin:
+        raise ValueError("forbidden")
+    if (
+        exercise.user_id is not None
+        and exercise.user_id != user_id
+        and not is_admin
+    ):
+        raise ValueError("forbidden")
+
+    if db.query(Exercise).filter(
+        Exercise.exercise_id == exercise_id
+    ).first():
         raise ValueError("has_history")
 
     db.delete(exercise)
@@ -104,10 +142,12 @@ def delete_exercise(db: Session, exercise_id: int) -> bool:
     return True
 
 
-def get_exercise_progression(db: Session, exercise_id: int):
-    """Return (exercise, sessions) for an exercise's progression history.
+def get_exercise_progression(
+    db: Session, exercise_id: int, user_id: int
+):
+    """Return (exercise, sessions) for caller's progression with this exercise.
 
-    sessions is a list of dicts sorted chronologically, each containing
+    sessions is a list of dicts sorted chronologically, each with
     session_id, logged_at, sets, volume, and best_set_weight.
     Returns (None, []) if the exercise does not exist.
     """
@@ -120,7 +160,10 @@ def get_exercise_progression(db: Session, exercise_id: int):
     rows = (
         db.query(Exercise, Workout.logged_at)
         .join(Workout, Exercise.session_id == Workout.id)
-        .filter(Exercise.exercise_id == exercise.id)
+        .filter(
+            Exercise.exercise_id == exercise.id,
+            Workout.user_id == user_id,
+        )
         .order_by(Workout.logged_at.asc(), Exercise.set_number.asc())
         .all()
     )

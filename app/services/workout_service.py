@@ -7,11 +7,13 @@ from app.model.models import Exercise, ExerciseDef, Workout
 
 
 def build_workout_detailed(db: Session, session: Workout) -> dict:
-    """Build the detailed workout dict used by WorkoutDetailed, grouping sets by exercise."""
+    """Build the detailed workout dict used by WorkoutDetailed."""
     sets = (
         db.query(Exercise)
         .options(
-            joinedload(Exercise.exercise_def).joinedload(ExerciseDef.muscle_groups)
+            joinedload(Exercise.exercise_def).joinedload(
+                ExerciseDef.muscle_groups
+            )
         )
         .filter(Exercise.session_id == session.id)
         .order_by(Exercise.set_number)
@@ -46,12 +48,18 @@ def build_workout_detailed(db: Session, session: Workout) -> dict:
     }
 
 
-def log_workout(db: Session, workout: WorkoutRequest) -> Workout:
-    """Persist a new workout session with all its exercise sets and return it."""
+def log_workout(
+    db: Session, workout: WorkoutRequest, user_id: int
+) -> Workout:
+    """Persist a new workout session for user_id with all its sets."""
     session = (
-        Workout(raw_input=workout.notes, logged_at=workout.logged_at)
+        Workout(
+            raw_input=workout.notes,
+            logged_at=workout.logged_at,
+            user_id=user_id,
+        )
         if workout.logged_at
-        else Workout(raw_input=workout.notes)
+        else Workout(raw_input=workout.notes, user_id=user_id)
     )
     db.add(session)
     db.flush()
@@ -71,21 +79,39 @@ def log_workout(db: Session, workout: WorkoutRequest) -> Workout:
     return session
 
 
-def get_workout(db: Session, session_id: int) -> Workout | None:
-    """Return a workout session by ID, or None if not found."""
-    return db.query(Workout).filter(Workout.id == session_id).first()
+def get_workout(
+    db: Session, session_id: int, user_id: int
+) -> Workout | None:
+    """Return a workout session owned by user_id, or None if not found."""
+    return (
+        db.query(Workout)
+        .filter(Workout.id == session_id, Workout.user_id == user_id)
+        .first()
+    )
 
 
-def get_all_workouts(db: Session) -> list[Workout]:
-    """Return all workout sessions ordered by date descending."""
-    return db.query(Workout).order_by(Workout.logged_at.desc()).all()
+def get_all_workouts(db: Session, user_id: int) -> list[Workout]:
+    """Return all workout sessions for user_id ordered by date descending."""
+    return (
+        db.query(Workout)
+        .filter(Workout.user_id == user_id)
+        .order_by(Workout.logged_at.desc())
+        .all()
+    )
 
 
 def update_workout(
-    db: Session, session_id: int, workout: WorkoutRequest
+    db: Session,
+    session_id: int,
+    workout: WorkoutRequest,
+    user_id: int,
 ) -> Workout | None:
-    """Replace all sets in an existing workout session; returns None if not found."""
-    session = db.query(Workout).filter(Workout.id == session_id).first()
+    """Replace all sets in a workout owned by user_id; returns None if not found."""
+    session = (
+        db.query(Workout)
+        .filter(Workout.id == session_id, Workout.user_id == user_id)
+        .first()
+    )
     if not session:
         return None
 
@@ -107,9 +133,15 @@ def update_workout(
     return session
 
 
-def delete_workout(db: Session, session_id: int) -> bool:
-    """Delete a workout session and all its sets; returns False if not found."""
-    session = db.query(Workout).filter(Workout.id == session_id).first()
+def delete_workout(
+    db: Session, session_id: int, user_id: int
+) -> bool:
+    """Delete a workout owned by user_id; returns False if not found."""
+    session = (
+        db.query(Workout)
+        .filter(Workout.id == session_id, Workout.user_id == user_id)
+        .first()
+    )
     if not session:
         return False
     db.delete(session)

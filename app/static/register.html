@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GymLog — Login</title>
+  <title>GymLog — Register</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -77,29 +77,31 @@
       min-height: 20px;
     }
 
-    .register-link {
+    .login-link {
       margin-top: 20px;
       text-align: center;
       font-size: 0.85rem;
       color: #555;
     }
-    .register-link a {
+    .login-link a {
       color: #888;
       text-decoration: none;
     }
-    .register-link a:hover { color: #f0f0f0; }
+    .login-link a:hover { color: #f0f0f0; }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="logo">GymLog</div>
     <label for="username">Username</label>
-    <input type="text" id="username" placeholder="Enter username" autofocus autocomplete="username" />
+    <input type="text" id="username" placeholder="Choose a username" autofocus autocomplete="username" />
     <label for="password">Password</label>
-    <input type="password" id="password" placeholder="Enter password" autocomplete="current-password" />
-    <button id="btn">Sign in</button>
+    <input type="password" id="password" placeholder="Choose a password" autocomplete="new-password" />
+    <label for="signup-code">Signup Code</label>
+    <input type="password" id="signup-code" placeholder="Enter invite code" autocomplete="off" />
+    <button id="btn">Create account</button>
     <div class="error" id="error"></div>
-    <div class="register-link">New here? <a href="/register">Register &rarr;</a></div>
+    <div class="login-link">Already have an account? <a href="/login">&larr; Sign in</a></div>
   </div>
 
   <script>
@@ -109,29 +111,51 @@
 
     const usernameEl = document.getElementById('username');
     const passwordEl = document.getElementById('password');
+    const codeEl = document.getElementById('signup-code');
     const btn = document.getElementById('btn');
     const errorEl = document.getElementById('error');
 
-    async function login() {
+    function validateInputs(username, password) {
+      if (!/^[a-zA-Z0-9_\-]{3,30}$/.test(username)) {
+        return 'Username must be 3–30 characters: letters, numbers, _ or -.';
+      }
+      if (password.length < 3 || password.length > 72) {
+        return 'Password must be 3–72 characters.';
+      }
+      if (!/^[\x20-\x7E]+$/.test(password)) {
+        return 'Password contains invalid characters.';
+      }
+      return null;
+    }
+
+    async function register() {
       const username = usernameEl.value.trim();
-      const password = passwordEl.value.trim();
-      if (!username || !password) return;
+      const password = passwordEl.value;
+      const signup_code = codeEl.value.trim();
+      if (!username || !password || !signup_code) return;
+      const validationError = validateInputs(username, password);
+      if (validationError) { errorEl.textContent = validationError; return; }
       btn.disabled = true;
       errorEl.textContent = '';
       try {
-        const res = await fetch('/api/auth/login', {
+        const res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password }),
+          body: JSON.stringify({ username, password, signup_code }),
         });
         if (res.ok) {
           const data = await res.json();
           localStorage.setItem('access_token', data.access_token);
           window.location.replace('/');
-        } else {
-          errorEl.textContent = 'Incorrect username or password.';
-          passwordEl.value = '';
+        } else if (res.status === 409) {
+          errorEl.textContent = 'That username is already taken.';
           usernameEl.select();
+        } else if (res.status === 400) {
+          errorEl.textContent = 'Invalid signup code.';
+          codeEl.value = '';
+          codeEl.focus();
+        } else {
+          errorEl.textContent = 'Something went wrong. Try again.';
         }
       } catch {
         errorEl.textContent = 'Something went wrong. Try again.';
@@ -140,9 +164,9 @@
       }
     }
 
-    btn.addEventListener('click', login);
-    [usernameEl, passwordEl].forEach(el => {
-      el.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+    btn.addEventListener('click', register);
+    [usernameEl, passwordEl, codeEl].forEach(el => {
+      el.addEventListener('keydown', e => { if (e.key === 'Enter') register(); });
     });
   </script>
 </body>
