@@ -1,4 +1,4 @@
-.PHONY: test up down
+.PHONY: test up down build
 
 test:
 	cd services/api  && pytest tests/ -v
@@ -9,3 +9,6 @@ up:
 
 down:
 	docker compose down
+
+build:
+	docker compose build
