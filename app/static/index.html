@@ -190,6 +190,28 @@
     }
     .notes-textarea:focus { outline: none; border-color: #555; }
 
+    .log-date-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .log-date-label {
+      font-size: 0.85rem;
+      color: #888;
+      white-space: nowrap;
+    }
+    .log-date-input {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #e0e0e0;
+      padding: 6px 10px;
+      font-size: 0.9rem;
+      color-scheme: dark;
+    }
+    .log-date-input:focus { outline: none; border-color: #555; }
+
     .btn-submit {
       background: #f0f0f0;
       color: #0f0f0f;
@@ -453,6 +475,10 @@
     </select>
   </div>
 
+  <div class="log-date-row">
+    <label class="log-date-label" for="workout-date-input">Workout Date</label>
+    <input type="date" id="workout-date-input" class="log-date-input" />
+  </div>
   <div id="exercises"></div>
 
   <button class="btn-add-exercise" onclick="addExercise()">+ Add Exercise</button>
@@ -488,6 +514,11 @@
       const d = new Date();
       return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 19);
     }
+    // Set workout date input to today's local date on load
+    (function () {
+      const el = document.getElementById('workout-date-input');
+      if (el) el.value = localISOString().slice(0, 10);
+    })();
 
     let allExercises = [];
     let exerciseMap = {};
@@ -966,6 +997,22 @@
       if (exercises.length === 0) { showToast('Add at least one exercise', 'error'); return; }
 
       const notes = document.getElementById('workout-notes-input').value.trim() || null;
+
+      const dateVal = document.getElementById('workout-date-input').value;
+      let loggedAt;
+      if (dateVal) {
+        const chosen = new Date(dateVal + 'T00:00:00');
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        if (chosen > now) {
+          showToast('Workout date cannot be in the future', 'error');
+          return;
+        }
+        loggedAt = dateVal + 'T00:00:00';
+      } else {
+        loggedAt = localISOString();
+      }
+
       const btn = document.getElementById('submitBtn');
       btn.disabled = true;
       btn.textContent = 'Logging...';
@@ -974,7 +1021,7 @@
         const res = await authFetch('/api/workouts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ exercises, notes, logged_at: localISOString() }),
+          body: JSON.stringify({ exercises, notes, logged_at: loggedAt }),
         });
         if (!res.ok) throw new Error(await res.text());
 
@@ -984,6 +1031,7 @@
           `<a href="/workout/${data.session_id}">View workout →</a>`;
         document.getElementById('exercises').innerHTML = '';
         document.getElementById('workout-notes-input').value = '';
+        document.getElementById('workout-date-input').value = localISOString().slice(0, 10);
         setCounts = {};
         exerciseCount = 0;
         addExercise();
