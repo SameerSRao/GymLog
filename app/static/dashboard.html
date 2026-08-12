@@ -302,7 +302,8 @@
         'text-align:center;';
       demoBanner.innerHTML =
         'You\'re in demo mode. ' +
-        '<a href="/register" style="color:#f0f0f0;">Sign up</a> to log workouts.';
+        '<a href="/register" style="color:#f0f0f0;" ' +
+        'onclick="logout()">Sign up</a> to log workouts.';
       document.body.prepend(demoBanner);
       var logBtn = document.querySelector('.btn-log');
       if (logBtn) logBtn.style.display = 'none';
