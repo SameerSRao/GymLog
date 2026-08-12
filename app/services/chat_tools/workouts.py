@@ -11,8 +11,10 @@ from app.services.chat_tools.base import (
     _best_exercise_match,
 )
 from app.services.workout_service import (
+    delete_workout as _delete_workout,
     get_all_workouts,
     log_workout as _log_workout,
+    update_workout as _update_workout,
 )
 
 WORKOUT_DECLARATIONS = [
@@ -77,6 +79,75 @@ WORKOUT_DECLARATIONS = [
                 ),
             },
             required=["exercises"],
+        ),
+    ),
+    types.FunctionDeclaration(
+        name="delete_workout",
+        description=(
+            "Delete a workout session by session_id. Call"
+            " get_recent_workouts first to find the correct session_id."
+            " Only call after the user has explicitly confirmed."
+        ),
+        parameters=types.Schema(
+            type=types.Type.OBJECT,
+            properties={
+                "session_id": types.Schema(
+                    type=types.Type.INTEGER,
+                    description="The session ID to delete",
+                ),
+            },
+            required=["session_id"],
+        ),
+    ),
+    types.FunctionDeclaration(
+        name="update_workout",
+        description=(
+            "Replace all exercises and sets in an existing workout"
+            " session in-place. Call get_recent_workouts first to find"
+            " the session_id. Only call after the user has explicitly"
+            " confirmed the full updated exercise list."
+        ),
+        parameters=types.Schema(
+            type=types.Type.OBJECT,
+            properties={
+                "session_id": types.Schema(
+                    type=types.Type.INTEGER,
+                    description="The session ID to update",
+                ),
+                "exercises": types.Schema(
+                    type=types.Type.ARRAY,
+                    items=types.Schema(
+                        type=types.Type.OBJECT,
+                        properties={
+                            "exercise_name": types.Schema(
+                                type=types.Type.STRING
+                            ),
+                            "sets": types.Schema(
+                                type=types.Type.ARRAY,
+                                items=types.Schema(
+                                    type=types.Type.OBJECT,
+                                    properties={
+                                        "reps": types.Schema(
+                                            type=types.Type.INTEGER
+                                        ),
+                                        "weight_lbs": types.Schema(
+                                            type=types.Type.NUMBER,
+                                            description=(
+                                                "Weight in lbs;"
+                                                " omit for bodyweight"
+                                            ),
+                                        ),
+                                    },
+                                    required=["reps"],
+                                ),
+                            ),
+                        },
+                        required=["exercise_name", "sets"],
+                    ),
+                ),
+                "notes": types.Schema(type=types.Type.STRING),
+            },
+            required=["session_id", "exercises"],
         ),
     ),
 ]
@@ -155,6 +226,46 @@ def handle_workout_tool(
             "session_id": session.id,
             "logged_at": session.logged_at.isoformat(),
             "exercises_logged": len(logged),
+        })
+
+    if name == "delete_workout":
+        session_id = inputs["session_id"]
+        found = _delete_workout(db, session_id, user_id)
+        if not found:
+            return json.dumps({
+                "error": f"Workout session {session_id} not found."
+            })
+        return json.dumps({
+            "success": True,
+            "deleted_session_id": session_id,
+        })
+
+    if name == "update_workout":
+        session_id = inputs["session_id"]
+        all_ex = _all_exercises_with_muscles(db)
+        ex_by_name = {e.name.lower(): e for e in all_ex}
+        logged, not_found = _resolve_exercise_inputs(
+            inputs["exercises"], ex_by_name, all_ex
+        )
+        if not_found:
+            return json.dumps({
+                "error": (
+                    f"Exercises not found: {', '.join(not_found)}."
+                    " Use search_exercises to find the correct name."
+                )
+            })
+        req = WorkoutRequest(
+            exercises=logged, notes=inputs.get("notes")
+        )
+        session = _update_workout(db, session_id, req, user_id)
+        if not session:
+            return json.dumps({
+                "error": f"Workout session {session_id} not found."
+            })
+        return json.dumps({
+            "success": True,
+            "session_id": session.id,
+            "exercises_updated": len(logged),
         })
 
     return json.dumps({"error": f"Unknown workout tool: {name}"})
