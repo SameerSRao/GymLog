@@ -131,7 +131,7 @@ def handle_exercise_tool(
     """Dispatch an exercise tool call; return result as a JSON string."""
     if name == "search_exercises":
         query = inputs["query"].lower()
-        exercises = _all_exercises_with_muscles(db)
+        exercises = _all_exercises_with_muscles(db, user_id)
         matches = [
             {
                 "id": e.id,
@@ -148,7 +148,7 @@ def handle_exercise_tool(
     if name == "get_exercise_progression":
         raw_name = inputs["exercise_name"]
         query_words = raw_name.lower().split()
-        exercises = _all_exercises_with_muscles(db)
+        exercises = _all_exercises_with_muscles(db, user_id)
         q_set = set(query_words)
         candidates = [
             e for e in exercises
@@ -223,7 +223,7 @@ def handle_exercise_tool(
 
     if name == "update_exercise":
         raw_name = inputs["exercise_name"]
-        exercises = _all_exercises_with_muscles(db)
+        exercises = _all_exercises_with_muscles(db, user_id)
         ex_by_name = {e.name.lower(): e for e in exercises}
         match = ex_by_name.get(raw_name.lower()) or _best_exercise_match(
             raw_name.lower().split(), exercises
@@ -280,7 +280,7 @@ def handle_exercise_tool(
 
     if name == "delete_exercise":
         raw_name = inputs["exercise_name"]
-        exercises = _all_exercises_with_muscles(db)
+        exercises = _all_exercises_with_muscles(db, user_id)
         ex_by_name = {e.name.lower(): e for e in exercises}
         match = ex_by_name.get(raw_name.lower()) or _best_exercise_match(
             raw_name.lower().split(), exercises

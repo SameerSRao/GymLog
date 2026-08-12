@@ -184,7 +184,7 @@ def handle_routine_tool(
         return json.dumps({"routines": result, "count": len(result)})
 
     if name == "create_routine":
-        all_ex = _all_exercises_with_muscles(db)
+        all_ex = _all_exercises_with_muscles(db, user_id)
         ex_by_name = {e.name.lower(): e for e in all_ex}
         exercise_reqs, not_found = _resolve_routine_exercises(
             inputs["exercises"], ex_by_name, all_ex
@@ -226,7 +226,7 @@ def handle_routine_tool(
         routine = routine_or_err
         new_name = inputs.get("new_name") or routine.name
         if inputs.get("exercises"):
-            all_ex = _all_exercises_with_muscles(db)
+            all_ex = _all_exercises_with_muscles(db, user_id)
             ex_by_name = {e.name.lower(): e for e in all_ex}
             exercise_reqs, not_found = _resolve_routine_exercises(
                 inputs["exercises"], ex_by_name, all_ex
@@ -274,7 +274,9 @@ def handle_routine_tool(
         if isinstance(routine_or_err, dict):
             return json.dumps(routine_or_err)
         routine = routine_or_err
-        _delete_routine(db, routine.id, user_id)
+        found = _delete_routine(db, routine.id, user_id)
+        if not found:
+            return json.dumps({"error": "Routine not found."})
         return json.dumps({"success": True, "deleted": routine.name})
 
     return json.dumps({"error": f"Unknown routine tool: {name}"})

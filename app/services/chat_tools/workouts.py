@@ -205,7 +205,7 @@ def handle_workout_tool(
         return json.dumps({"workouts": recent, "count": len(recent)})
 
     if name == "log_workout":
-        all_ex = _all_exercises_with_muscles(db)
+        all_ex = _all_exercises_with_muscles(db, user_id)
         ex_by_name = {e.name.lower(): e for e in all_ex}
         logged, not_found = _resolve_exercise_inputs(
             inputs["exercises"], ex_by_name, all_ex
@@ -242,7 +242,7 @@ def handle_workout_tool(
 
     if name == "update_workout":
         session_id = inputs["session_id"]
-        all_ex = _all_exercises_with_muscles(db)
+        all_ex = _all_exercises_with_muscles(db, user_id)
         ex_by_name = {e.name.lower(): e for e in all_ex}
         logged, not_found = _resolve_exercise_inputs(
             inputs["exercises"], ex_by_name, all_ex

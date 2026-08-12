@@ -3,11 +3,17 @@ from sqlalchemy.orm import Session, joinedload
 from app.model.models import ExerciseDef, MuscleGroup, Routine
 
 
-def _all_exercises_with_muscles(db: Session) -> list[ExerciseDef]:
-    """Return all exercises with muscle groups eager-loaded."""
+def _all_exercises_with_muscles(
+    db: Session, user_id: int
+) -> list[ExerciseDef]:
+    """Return exercises visible to user_id with muscle groups eager-loaded."""
     return (
         db.query(ExerciseDef)
         .options(joinedload(ExerciseDef.muscle_groups))
+        .filter(
+            (ExerciseDef.user_id.is_(None))
+            | (ExerciseDef.user_id == user_id)
+        )
         .order_by(ExerciseDef.name)
         .all()
     )
