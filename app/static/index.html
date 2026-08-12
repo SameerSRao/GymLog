@@ -484,6 +484,11 @@
       });
       document.addEventListener('click', function() { document.getElementById('avatar-dropdown').classList.remove('open'); });
     })();
+    function localISOString() {
+      const d = new Date();
+      return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 19);
+    }
+
     let allExercises = [];
     let exerciseMap = {};
     let muscleGroups = [];
@@ -969,7 +974,7 @@
         const res = await authFetch('/api/workouts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ exercises, notes }),
+          body: JSON.stringify({ exercises, notes, logged_at: localISOString() }),
         });
         if (!res.ok) throw new Error(await res.text());
 

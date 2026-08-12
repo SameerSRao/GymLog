@@ -77,6 +77,14 @@ WORKOUT_DECLARATIONS = [
                     type=types.Type.STRING,
                     description="Optional notes for the workout",
                 ),
+                "logged_at": types.Schema(
+                    type=types.Type.STRING,
+                    description=(
+                        "ISO 8601 datetime for when the workout occurred"
+                        " (e.g. '2024-03-15T14:30:00'). Omit to use the"
+                        " user's current local time."
+                    ),
+                ),
             },
             required=["exercises"],
         ),
@@ -181,7 +189,11 @@ def _resolve_exercise_inputs(
 
 
 def handle_workout_tool(
-    name: str, inputs: dict, db: Session, user_id: int
+    name: str,
+    inputs: dict,
+    db: Session,
+    user_id: int,
+    local_time: str | None = None,
 ) -> str:
     """Dispatch a workout tool call; return result as a JSON string."""
     if name == "get_recent_workouts":
@@ -217,8 +229,17 @@ def handle_workout_tool(
                     " Use search_exercises to find the correct name."
                 )
             })
+        raw_ts = inputs.get("logged_at") or local_time
+        logged_at = None
+        if raw_ts:
+            try:
+                logged_at = datetime.fromisoformat(raw_ts)
+            except ValueError:
+                pass
         req = WorkoutRequest(
-            exercises=logged, notes=inputs.get("notes")
+            exercises=logged,
+            notes=inputs.get("notes"),
+            logged_at=logged_at,
         )
         session = _log_workout(db, req, user_id)
         return json.dumps({

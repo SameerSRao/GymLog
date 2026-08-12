@@ -405,7 +405,7 @@
         const res = await authFetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: history }),
+          body: JSON.stringify({ messages: history, local_time: (function(d){ return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 19); })(new Date()) }),
         });
 
         typingEl.remove();

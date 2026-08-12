@@ -23,6 +23,7 @@ class ChatRequest(BaseModel):
     """Request body for the chat endpoint."""
 
     messages: list[ChatMessage]
+    local_time: str | None = None
 
 
 @router.post("/chat")
@@ -42,7 +43,9 @@ def chat(
     def generate():
         """Yield SSE-formatted chunks from the agentic tool loop."""
         try:
-            for chunk in run_chat(db, messages, user_id):
+            for chunk in run_chat(
+                db, messages, user_id, local_time=body.local_time
+            ):
                 yield f"data: {json.dumps({'text': chunk})}\n\n"
         except Exception as exc:
             yield f"data: {json.dumps({'error': str(exc)})}\n\n"
