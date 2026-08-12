@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.api.schemas import CreateExerciseSchema, ExerciseUpdate
 from app.model.models import Exercise, ExerciseDef, MuscleGroup, Workout
@@ -10,6 +10,7 @@ def get_all_exercises(db: Session, user_id: int) -> list[ExerciseDef]:
     """Return global exercises plus caller's custom exercises, alphabetically."""
     return (
         db.query(ExerciseDef)
+        .options(joinedload(ExerciseDef.muscle_groups))
         .filter(
             (ExerciseDef.user_id.is_(None)) |
             (ExerciseDef.user_id == user_id)
