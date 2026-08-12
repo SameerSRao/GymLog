@@ -5,7 +5,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from app.db.models import Exercise, ExerciseDef, MuscleGroup, User, Workout
-from app.services.auth_service import hash_password
+from app.auth.service import hash_password
 
 _EXERCISES_FILE = Path(__file__).parent.parent.parent / "exercises.json"
 
