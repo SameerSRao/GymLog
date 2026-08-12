@@ -37,6 +37,7 @@
   function getUsername() { var p = getTokenPayload(); return p ? p.username : ''; }
   function isAdmin() { var p = getTokenPayload(); return p ? Boolean(p.is_admin) : false; }
   function isPremium() { var p = getTokenPayload(); return p ? Boolean(p.is_premium) : false; }
+  function isDemo() { var p = getTokenPayload(); return p ? Boolean(p.is_demo) : false; }
   function getCurrentUserId() { var p = getTokenPayload(); return p ? parseInt(p.sub, 10) : null; }
 
   window.checkAuth = checkAuth;
@@ -46,5 +47,6 @@
   window.getUsername = getUsername;
   window.isAdmin = isAdmin;
   window.isPremium = isPremium;
+  window.isDemo = isDemo;
   window.getCurrentUserId = getCurrentUserId;
 })();

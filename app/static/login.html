@@ -69,6 +69,20 @@
     button:hover { background: #ccc; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
 
+    .demo-btn {
+      width: 100%;
+      background: transparent;
+      color: #888;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      padding: 12px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .demo-btn:hover { border-color: #555; color: #f0f0f0; }
+
     .error {
       color: #e05555;
       font-size: 0.85rem;
@@ -98,6 +112,7 @@
     <label for="password">Password</label>
     <input type="password" id="password" placeholder="Enter password" autocomplete="current-password" />
     <button id="btn">Sign in</button>
+    <button class="demo-btn" id="demo-btn">Try Demo</button>
     <div class="error" id="error"></div>
     <div class="register-link">New here? <a href="/register">Register &rarr;</a></div>
   </div>
@@ -143,6 +158,22 @@
     btn.addEventListener('click', login);
     [usernameEl, passwordEl].forEach(el => {
       el.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+    });
+
+    document.getElementById('demo-btn').addEventListener('click', async function() {
+      errorEl.textContent = '';
+      try {
+        const res = await fetch('/api/auth/demo');
+        if (res.ok) {
+          const data = await res.json();
+          localStorage.setItem('access_token', data.access_token);
+          window.location.replace('/');
+        } else {
+          errorEl.textContent = 'Demo is unavailable right now.';
+        }
+      } catch {
+        errorEl.textContent = 'Something went wrong. Try again.';
+      }
     });
   </script>
 </body>

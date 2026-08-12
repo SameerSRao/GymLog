@@ -479,6 +479,7 @@
     }
 
     function canEditExercise(ex) {
+      if (isDemo()) return false;
       return isAdmin() || (ex.user_id !== null && ex.user_id === getCurrentUserId());
     }
 

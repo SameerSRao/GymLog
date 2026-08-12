@@ -27,14 +27,27 @@ def get_current_user(
     return decode_access_token(credentials.credentials)
 
 
+def require_not_demo(
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """Raise 403 if the caller is a demo account."""
+    if current_user.get("is_demo"):
+        raise HTTPException(
+            status_code=403,
+            detail="Demo accounts cannot perform this action",
+        )
+    return current_user
+
+
 def _make_token(user) -> str:
-    """Return a signed JWT for user encoding id, username, is_admin, is_premium."""
+    """Return a signed JWT for user with id, username, flags."""
     return create_access_token(
         {
             "sub": str(user.id),
             "username": user.username,
             "is_admin": user.is_admin,
             "is_premium": user.is_premium,
+            "is_demo": user.is_demo,
         },
         timedelta(hours=_TOKEN_EXPIRE_HOURS),
     )
@@ -61,6 +74,19 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
     if get_user_by_username(db, body.username):
         raise HTTPException(status_code=409, detail="Username already taken")
     user = create_user(db, body.username, body.password)
+    return TokenResponse(
+        access_token=_make_token(user), token_type="bearer"
+    )
+
+
+@router.get("/auth/demo", response_model=TokenResponse)
+def demo_login(db: Session = Depends(get_db)):
+    """Return a JWT for the demo user; 503 if demo user is not seeded."""
+    user = get_user_by_username(db, "demo")
+    if not user or not user.is_demo:
+        raise HTTPException(
+            status_code=503, detail="Demo unavailable"
+        )
     return TokenResponse(
         access_token=_make_token(user), token_type="bearer"
     )

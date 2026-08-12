@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.api.auth_routes import get_current_user
+from app.api.auth_routes import get_current_user, require_not_demo
 from app.api.schemas import (
     RoutineCreate,
     RoutineDetail,
@@ -56,7 +56,7 @@ def _to_detail(routine: Routine) -> RoutineDetail:
 def add_routine(
     data: RoutineCreate,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_not_demo),
 ):
     """Create a new routine for the current user; 409 if name is already taken."""
     user_id = int(current_user["sub"])
@@ -114,7 +114,7 @@ def replace_routine(
     routine_id: int,
     data: RoutineUpdate,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_not_demo),
 ):
     """Replace a routine's name and exercises; 404 if not owned, 409 on conflict."""
     user_id = int(current_user["sub"])
@@ -141,7 +141,7 @@ def replace_routine(
 def remove_routine(
     routine_id: int,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_not_demo),
 ):
     """Delete a routine owned by the current user; 404 if not found."""
     if not delete_routine(db, routine_id, int(current_user["sub"])):

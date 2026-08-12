@@ -1,9 +1,11 @@
 import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from app.model.models import ExerciseDef, MuscleGroup
+from app.model.models import Exercise, ExerciseDef, MuscleGroup, User, Workout
+from app.services.auth_service import hash_password
 
 _EXERCISES_FILE = Path(__file__).parent.parent.parent / "exercises.json"
 
@@ -80,5 +82,79 @@ def seed_exercises(db: Session) -> None:
             instructions=instructions,
             muscle_groups=muscles,
         ))
+
+    db.commit()
+
+
+def seed_demo_data(db: Session) -> None:
+    """Create demo user and refresh workout data when stale (>30 days old)."""
+    demo = db.query(User).filter(User.username == "demo").first()
+    if not demo:
+        demo = User(
+            username="demo",
+            password_hash=hash_password("demo-no-login"),
+            is_demo=True,
+        )
+        db.add(demo)
+        db.commit()
+        db.refresh(demo)
+    elif not demo.is_demo:
+        return
+
+    now = datetime.now(timezone.utc)
+    newest = (
+        db.query(Workout)
+        .filter(Workout.user_id == demo.id)
+        .order_by(Workout.logged_at.desc())
+        .first()
+    )
+
+    if newest is not None:
+        newest_dt = newest.logged_at
+        if newest_dt.tzinfo is None:
+            newest_dt = newest_dt.replace(tzinfo=timezone.utc)
+        if (now - newest_dt).days < 30:
+            return
+
+    old_workouts = (
+        db.query(Workout)
+        .filter(Workout.user_id == demo.id)
+        .all()
+    )
+    for w in old_workouts:
+        db.delete(w)
+    db.commit()
+
+    exercises = (
+        db.query(ExerciseDef)
+        .filter(ExerciseDef.user_id.is_(None))
+        .limit(5)
+        .all()
+    )
+    if not exercises:
+        return
+
+    ex_ids = [e.id for e in exercises]
+    for week in range(8):
+        for day_offset in [1, 3, 5]:
+            days_ago = (7 * week) + day_offset
+            workout_date = now - timedelta(days=days_ago)
+            session = Workout(
+                logged_at=workout_date,
+                user_id=demo.id,
+            )
+            db.add(session)
+            db.flush()
+
+            for ex_id in ex_ids[:2]:
+                base_weight = float(100 + (week * 5))
+                for set_num in range(1, 4):
+                    db.add(Exercise(
+                        session_id=session.id,
+                        exercise_id=ex_id,
+                        set_number=set_num,
+                        reps=5,
+                        weight_lbs=base_weight,
+                    ))
 
     db.commit()

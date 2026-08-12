@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.api.auth_routes import get_current_user
+from app.api.auth_routes import get_current_user, require_not_demo
 from app.api.schemas import WorkoutDetailed, WorkoutRequest, WorkoutResponse
 from app.db.database import get_db
 from app.services.workout_service import (
@@ -20,7 +20,7 @@ router = APIRouter(dependencies=[Depends(get_current_user)])
 def create_workout(
     workout: WorkoutRequest,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_not_demo),
 ):
     """Log a new workout session and return a summary."""
     user_id = int(current_user["sub"])
@@ -70,7 +70,7 @@ def replace_workout(
     session_id: int,
     workout: WorkoutRequest,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_not_demo),
 ):
     """Replace all exercises in a workout; 404 if not found or not owned."""
     session = update_workout(
@@ -85,7 +85,7 @@ def replace_workout(
 def remove_workout(
     session_id: int,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_not_demo),
 ):
     """Delete a workout and all its sets; 404 if not found or not owned."""
     if not delete_workout(db, session_id, int(current_user["sub"])):
