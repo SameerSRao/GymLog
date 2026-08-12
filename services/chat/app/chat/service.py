@@ -1,7 +1,6 @@
 import json
 import os
 import time
-from collections import Counter
 from pathlib import Path
 from typing import Generator
 
@@ -23,7 +22,7 @@ _MAX_TOOL_ROUNDS = 10
 
 
 def _build_dynamic_context(token: str) -> str:
-    """Return a short string summarising the user's data for the system prompt."""
+    """Return a training-data summary string for the system prompt."""
     workouts = api_client.get_workouts(token)
     total = len(workouts)
     last_logged = (
@@ -47,7 +46,7 @@ def run_chat(
     messages: list[dict[str, str]],
     local_time: str | None = None,
 ) -> Generator[str, None, None]:
-    """Run the agentic tool loop for the given JWT token; yield SSE chunks."""
+    """Run the Gemini tool loop for token; yield SSE text chunks."""
     dynamic_context = _build_dynamic_context(token)
     parts = [_SYSTEM_PROMPT, _KNOWLEDGE, dynamic_context]
     if local_time:
@@ -112,4 +111,7 @@ def run_chat(
 
         contents.append(types.Content(role="user", parts=result_parts))
     else:
-        yield "Sorry, I wasn't able to complete that request. Please try again."
+        yield (
+            "Sorry, I wasn't able to complete that request."
+            " Please try again."
+        )
