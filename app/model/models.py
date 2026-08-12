@@ -43,6 +43,9 @@ class User(Base):
     is_premium: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
+    is_demo: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)
     )
