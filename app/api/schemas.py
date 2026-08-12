@@ -4,7 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel, field_validator
 
 _USERNAME_RE = re.compile(r"^[a-zA-Z0-9_\-]{3,30}$")
-_PASSWORD_RE = re.compile(r"^[\x20-\x7E]{8,72}$")
+_PASSWORD_RE = re.compile(r"^[\x20-\x7E]{3,72}$")
 
 
 class LoginRequest(BaseModel):
@@ -38,7 +38,7 @@ class RegisterRequest(BaseModel):
         """Reject passwords outside printable ASCII or outside 8–72 chars."""
         if not _PASSWORD_RE.match(v):
             raise ValueError(
-                "Password must be 8–72 printable characters."
+                "Password must be 3–72 printable characters."
             )
         return v
 

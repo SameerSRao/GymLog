@@ -119,8 +119,8 @@
       if (!/^[a-zA-Z0-9_\-]{3,30}$/.test(username)) {
         return 'Username must be 3–30 characters: letters, numbers, _ or -.';
       }
-      if (password.length < 8 || password.length > 72) {
-        return 'Password must be 8–72 characters.';
+      if (password.length < 3 || password.length > 72) {
+        return 'Password must be 3–72 characters.';
       }
       if (!/^[\x20-\x7E]+$/.test(password)) {
         return 'Password contains invalid characters.';
