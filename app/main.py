@@ -10,12 +10,13 @@ from app.api.exercise_routes import router as exercise_router
 from app.api.routine_routes import router as routine_router
 from app.api.workout_routes import router as workout_router
 from app.db.database import Base, SessionLocal, engine
-from app.db.seed import seed_exercises
+from app.db.seed import seed_demo_data, seed_exercises
 
 if not os.getenv("TESTING"):
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as db:
         seed_exercises(db)
+        seed_demo_data(db)
 
 _dev = os.getenv("ENVIRONMENT") == "development"
 app = FastAPI(
