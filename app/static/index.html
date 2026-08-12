@@ -1001,14 +1001,11 @@
       const dateVal = document.getElementById('workout-date-input').value;
       let loggedAt;
       if (dateVal) {
-        const chosen = new Date(dateVal + 'T00:00:00');
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        if (chosen > now) {
+        loggedAt = dateVal + 'T' + localISOString().slice(11);
+        if (new Date(loggedAt) > new Date()) {
           showToast('Workout date cannot be in the future', 'error');
           return;
         }
-        loggedAt = dateVal + 'T00:00:00';
       } else {
         loggedAt = localISOString();
       }
