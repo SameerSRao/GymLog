@@ -115,11 +115,26 @@
     const btn = document.getElementById('btn');
     const errorEl = document.getElementById('error');
 
+    function validateInputs(username, password) {
+      if (!/^[a-zA-Z0-9_\-]{3,30}$/.test(username)) {
+        return 'Username must be 3–30 characters: letters, numbers, _ or -.';
+      }
+      if (password.length < 8 || password.length > 72) {
+        return 'Password must be 8–72 characters.';
+      }
+      if (!/^[\x20-\x7E]+$/.test(password)) {
+        return 'Password contains invalid characters.';
+      }
+      return null;
+    }
+
     async function register() {
       const username = usernameEl.value.trim();
-      const password = passwordEl.value.trim();
+      const password = passwordEl.value;
       const signup_code = codeEl.value.trim();
       if (!username || !password || !signup_code) return;
+      const validationError = validateInputs(username, password);
+      if (validationError) { errorEl.textContent = validationError; return; }
       btn.disabled = true;
       errorEl.textContent = '';
       try {

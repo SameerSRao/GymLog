@@ -1,6 +1,10 @@
+import re
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+
+_USERNAME_RE = re.compile(r"^[a-zA-Z0-9_\-]{3,30}$")
+_PASSWORD_RE = re.compile(r"^[\x20-\x7E]{8,72}$")
 
 
 class LoginRequest(BaseModel):
@@ -16,6 +20,27 @@ class RegisterRequest(BaseModel):
     username: str
     password: str
     signup_code: str
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v: str) -> str:
+        """Reject usernames that don't match [a-zA-Z0-9_-]{3,30}."""
+        if not _USERNAME_RE.match(v):
+            raise ValueError(
+                "Username must be 3–30 characters and contain only "
+                "letters, numbers, underscores, and hyphens."
+            )
+        return v
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        """Reject passwords outside printable ASCII or outside 8–72 chars."""
+        if not _PASSWORD_RE.match(v):
+            raise ValueError(
+                "Password must be 8–72 printable characters."
+            )
+        return v
 
 
 class TokenResponse(BaseModel):

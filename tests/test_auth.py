@@ -83,7 +83,7 @@ def test_register_correct_code_returns_201(client):
     """Assert POST /api/auth/register returns 201 and a JWT on valid code."""
     r = client.post("/api/auth/register", json={
         "username": "newuser",
-        "password": "pass123",
+        "password": "pass1234",
         "signup_code": "testcode",
     })
     assert r.status_code == 201
@@ -96,7 +96,7 @@ def test_register_wrong_code_returns_400(client):
     """Assert POST /api/auth/register returns 400 on wrong signup code."""
     r = client.post("/api/auth/register", json={
         "username": "newuser",
-        "password": "pass123",
+        "password": "pass1234",
         "signup_code": "wrongcode",
     })
     assert r.status_code == 400
@@ -106,7 +106,7 @@ def test_register_duplicate_username_returns_409(client, db, user):
     """Assert POST /api/auth/register returns 409 when username is taken."""
     r = client.post("/api/auth/register", json={
         "username": user.username,
-        "password": "pass123",
+        "password": "pass1234",
         "signup_code": "testcode",
     })
     assert r.status_code == 409
