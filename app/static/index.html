@@ -414,6 +414,10 @@
   <header class="site-header">
     <a href="/" class="site-logo">GymLog</a>
     <nav class="site-nav">
+      <a href="/workouts">History</a>
+      <a href="/exercises">Exercises</a>
+      <a href="/routines">Routines</a>
+      <button class="btn-new-exercise" onclick="toggleCreateForm()">+ New Exercise</button>
       <div class="nav-avatar" id="nav-avatar">
         <button class="avatar-btn" id="avatar-btn"></button>
         <div class="avatar-dropdown" id="avatar-dropdown">
@@ -422,10 +426,6 @@
           <button class="btn-logout" onclick="logout()">Log out</button>
         </div>
       </div>
-      <a href="/workouts">History</a>
-      <a href="/exercises">Exercises</a>
-      <a href="/routines">Routines</a>
-      <button class="btn-new-exercise" onclick="toggleCreateForm()">+ New Exercise</button>
     </nav>
   </header>
   <script>document.querySelectorAll('.site-nav a').forEach(a => { if (a.pathname === location.pathname) a.classList.add('active'); });</script>
