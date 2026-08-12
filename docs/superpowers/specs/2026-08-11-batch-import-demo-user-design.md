@@ -17,7 +17,7 @@ Two independent features:
 
 One row per set. Grouping key is the exact `timestamp` value — rows sharing a timestamp become one workout session.
 
-```
+```csv
 timestamp,exercise_name,set_number,reps,weight_lbs
 2025-01-10T09:00:00,Bench Press,1,8,135
 2025-01-10T09:00:00,Bench Press,2,8,135
