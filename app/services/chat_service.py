@@ -54,11 +54,17 @@ def _build_dynamic_context(db: Session, user_id: int) -> str:
 
 
 def run_chat(
-    db: Session, messages: list[dict[str, str]], user_id: int
+    db: Session,
+    messages: list[dict[str, str]],
+    user_id: int,
+    local_time: str | None = None,
 ) -> Generator[str, None, None]:
     """Run the agentic tool loop for user_id; yield text chunks for SSE streaming."""
     dynamic_context = _build_dynamic_context(db, user_id)
-    system_content = "\n\n".join([_SYSTEM_PROMPT, _KNOWLEDGE, dynamic_context])
+    parts = [_SYSTEM_PROMPT, _KNOWLEDGE, dynamic_context]
+    if local_time:
+        parts.append(f"User's current local time: {local_time}")
+    system_content = "\n\n".join(parts)
 
     recent = messages[-_MAX_HISTORY:]
     contents: list[types.Content] = [
@@ -105,7 +111,10 @@ def run_chat(
         result_parts = []
         for fc in func_calls:
             result = json.loads(
-                execute_tool(fc.name, dict(fc.args), db, user_id)
+                execute_tool(
+                    fc.name, dict(fc.args), db, user_id,
+                    local_time=local_time,
+                )
             )
             result_parts.append(
                 types.Part.from_function_response(
