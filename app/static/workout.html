@@ -278,6 +278,7 @@
       color: #f0f0f0;
       font-size: 1rem;
       padding: 10px 12px;
+      color-scheme: dark;
     }
     .edit-input:focus { outline: none; border-color: #555; }
 
@@ -490,6 +491,13 @@
     <div id="exercises"></div>
     <div id="edit-exercise-container" style="display:none"></div>
     <button id="edit-add-exercise-btn" class="btn-add-exercise" onclick="addExercise()" style="display:none">+ Add Exercise</button>
+    <div id="edit-datetime-row" style="display:none; margin-bottom:14px;">
+      <label class="edit-label">Date &amp; Time</label>
+      <div style="display:flex; gap:8px;">
+        <input type="date" id="edit-date-input" class="edit-input" style="flex:1;" />
+        <input type="time" id="edit-time-input" class="edit-input" style="flex:1;" />
+      </div>
+    </div>
     <textarea id="edit-notes" class="notes-textarea" placeholder="Notes (optional)" rows="3" style="display:none"></textarea>
   </div>
 
@@ -882,6 +890,13 @@
       const editNotes = document.getElementById('edit-notes');
       editNotes.value = workout.notes || '';
       editNotes.style.display = 'block';
+
+      const dtRow = document.getElementById('edit-datetime-row');
+      dtRow.style.display = 'block';
+      // Pre-populate from workout.logged_at e.g. "2026-08-10T18:30:00"
+      const [datePart, timePart] = (workout.logged_at || '').split('T');
+      document.getElementById('edit-date-input').value = datePart || '';
+      document.getElementById('edit-time-input').value = (timePart || '').slice(0, 5); // "HH:MM"
     }
 
     function exitEditMode() {
@@ -892,6 +907,7 @@
       document.getElementById('edit-exercise-container').style.display = 'none';
       document.getElementById('edit-add-exercise-btn').style.display = 'none';
       document.getElementById('edit-notes').style.display = 'none';
+      document.getElementById('edit-datetime-row').style.display = 'none';
 
       renderWorkout(workout);
     }
@@ -929,6 +945,23 @@
       if (exercises.length === 0) { alert('Add at least one exercise'); return; }
 
       const notes = document.getElementById('edit-notes').value.trim() || null;
+
+      const editDate = document.getElementById('edit-date-input').value;
+      const editTime = document.getElementById('edit-time-input').value;
+
+      if (!editDate || !editTime) {
+        alert('Date and time are required');
+        return;
+      }
+
+      const chosenDt = new Date(editDate + 'T' + editTime + ':00');
+      if (chosenDt > new Date()) {
+        alert('Workout date cannot be in the future');
+        return;
+      }
+
+      const loggedAt = editDate + 'T' + editTime + ':00';
+
       const saveBtn = document.querySelector('.btn-save');
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving…';
@@ -937,7 +970,7 @@
         const res = await authFetch(`/api/workout/${sessionId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ exercises, notes }),
+          body: JSON.stringify({ exercises, notes, logged_at: loggedAt }),
         });
         if (!res.ok) throw new Error(await res.text());
         workout = await res.json();
