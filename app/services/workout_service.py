@@ -1,4 +1,5 @@
 from collections import defaultdict
+from datetime import datetime
 
 from sqlalchemy.orm import Session, joinedload
 
@@ -90,14 +91,23 @@ def get_workout(
     )
 
 
-def get_all_workouts(db: Session, user_id: int) -> list[Workout]:
-    """Return all workout sessions for user_id ordered by date descending."""
-    return (
-        db.query(Workout)
-        .filter(Workout.user_id == user_id)
-        .order_by(Workout.logged_at.desc())
-        .all()
-    )
+def get_all_workouts(
+    db: Session,
+    user_id: int,
+    year: int | None = None,
+    month: int | None = None,
+) -> list[Workout]:
+    """Return workout sessions for user_id, optionally filtered to one month."""
+    q = db.query(Workout).filter(Workout.user_id == user_id)
+    if year is not None and month is not None:
+        start = datetime(year, month, 1)
+        end = (
+            datetime(year + 1, 1, 1)
+            if month == 12
+            else datetime(year, month + 1, 1)
+        )
+        q = q.filter(Workout.logged_at >= start, Workout.logged_at < end)
+    return q.order_by(Workout.logged_at.desc()).all()
 
 
 def update_workout(

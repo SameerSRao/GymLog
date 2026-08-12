@@ -250,15 +250,7 @@
           resultEl.className = 'result error';
           resultEl.innerHTML = '<strong>Error ' + res.status + '</strong> — ' + (data.detail || 'Import failed.');
         } else if (data.sessions_created > 0) {
-          // Navigate to the month of the most recent imported session
-          var dates = payload
-            .filter(function(s) { return s.logged_at; })
-            .map(function(s) { return new Date(s.logged_at); })
-            .filter(function(d) { return !isNaN(d); });
-          dates.sort(function(a, b) { return b - a; });
-          var target = dates.length > 0 ? dates[0] : new Date();
-          var month = String(target.getMonth() + 1).padStart(2, '0');
-          window.location.replace('/workouts?month=' + target.getFullYear() + '-' + month);
+          window.location.replace('/workouts');
         } else {
           var errHtml = '';
           if (data.errors && data.errors.length > 0) {

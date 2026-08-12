@@ -54,10 +54,12 @@ def batch_import_workouts(
 def list_workouts(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
+    year: int | None = None,
+    month: int | None = None,
 ):
-    """Return all workout sessions for the current user, newest first."""
+    """Return workout sessions for the current user, optionally filtered by month."""
     user_id = int(current_user["sub"])
-    sessions = get_all_workouts(db, user_id)
+    sessions = get_all_workouts(db, user_id, year=year, month=month)
     return [
         WorkoutResponse(
             session_id=s.id,

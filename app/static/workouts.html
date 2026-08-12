@@ -280,22 +280,13 @@
       });
       document.addEventListener('click', function() { document.getElementById('avatar-dropdown').classList.remove('open'); });
     })();
-    let allSessions = [];
+    let recentSessions = [];
     let dateMap = {};  // "YYYY-MM-DD" → [session, ...]
     let viewYear, viewMonth;
 
     function toLocalKey(isoString) {
       const d = new Date(isoString);
       return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    }
-
-    function buildDateMap() {
-      dateMap = {};
-      for (const s of allSessions) {
-        const key = toLocalKey(s.logged_at);
-        if (!dateMap[key]) dateMap[key] = [];
-        dateMap[key].push(s);
-      }
     }
 
     function handleDayClick(event, key) {
@@ -339,13 +330,26 @@
       event.stopPropagation();
     }
 
-    function renderCalendar(year, month) {
+    async function loadCalendar(year, month) {
       viewYear = year;
       viewMonth = month;
 
       const MONTHS = ['January','February','March','April','May','June',
                       'July','August','September','October','November','December'];
       document.getElementById('cal-month-label').textContent = `${MONTHS[month]} ${year}`;
+
+      // Fetch workouts for this specific month fresh from the server
+      const res = await authFetch(
+        `/api/workouts?year=${year}&month=${month + 1}`
+      );
+      const sessions = await res.json();
+
+      dateMap = {};
+      for (const s of sessions) {
+        const key = toLocalKey(s.logged_at);
+        if (!dateMap[key]) dateMap[key] = [];
+        dateMap[key].push(s);
+      }
 
       const today = new Date();
       const todayKey = toLocalKey(today.toISOString());
@@ -365,19 +369,19 @@
 
       for (let day = 1; day <= lastDay.getDate(); day++) {
         const key = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-        const sessions = dateMap[key];
+        const daySessions = dateMap[key];
         const isToday = key === todayKey;
 
         let cls = 'cal-day';
         if (isToday) cls += ' today';
-        if (sessions) cls += ' has-workout';
+        if (daySessions) cls += ' has-workout';
 
-        const badge = sessions && sessions.length > 1
-          ? `<span class="multi-badge">${'●'.repeat(Math.min(sessions.length, 4))}</span>`
+        const badge = daySessions && daySessions.length > 1
+          ? `<span class="multi-badge">${'●'.repeat(Math.min(daySessions.length, 4))}</span>`
           : '';
 
-        const onclick = sessions ? `data-key="${key}"` : '';
-        html += `<div class="${cls}" ${onclick}>${day}${badge}</div>`;
+        const attr = daySessions ? `data-key="${key}"` : '';
+        html += `<div class="${cls}" ${attr}>${day}${badge}</div>`;
       }
 
       const totalCells = startOffset + lastDay.getDate();
@@ -388,7 +392,6 @@
 
       grid.innerHTML = html;
 
-      // Attach click handlers to workout days
       grid.querySelectorAll('.cal-day.has-workout').forEach(el => {
         el.addEventListener('click', e => handleDayClick(e, el.dataset.key));
       });
@@ -396,11 +399,11 @@
 
     function renderRecent() {
       const list = document.getElementById('recent-list');
-      if (allSessions.length === 0) {
+      if (recentSessions.length === 0) {
         list.innerHTML = '<p style="color:#444;font-size:0.9rem;">No workouts logged yet.</p>';
         return;
       }
-      list.innerHTML = allSessions.slice(0, 12).map(s => {
+      list.innerHTML = recentSessions.slice(0, 12).map(s => {
         const date = new Date(s.logged_at).toLocaleDateString('en-US', {
           weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
         });
@@ -424,25 +427,24 @@
     });
 
     async function init() {
-      const res = await authFetch('/api/workouts');
-      allSessions = await res.json();
-      buildDateMap();
-
-      var monthParam = new URLSearchParams(location.search).get('month');
-      var calDate = monthParam ? new Date(monthParam + '-01') : new Date();
-      if (isNaN(calDate)) calDate = new Date();
-      renderCalendar(calDate.getFullYear(), calDate.getMonth());
+      // Recent list: all workouts, no filter
+      const recentRes = await authFetch('/api/workouts');
+      recentSessions = await recentRes.json();
       renderRecent();
+
+      // Calendar: fetch for the initial month
+      const now = new Date();
+      await loadCalendar(now.getFullYear(), now.getMonth());
     }
 
     document.getElementById('prev-btn').onclick = () => {
-      if (viewMonth === 0) renderCalendar(viewYear - 1, 11);
-      else renderCalendar(viewYear, viewMonth - 1);
+      if (viewMonth === 0) loadCalendar(viewYear - 1, 11);
+      else loadCalendar(viewYear, viewMonth - 1);
     };
 
     document.getElementById('next-btn').onclick = () => {
-      if (viewMonth === 11) renderCalendar(viewYear + 1, 0);
-      else renderCalendar(viewYear, viewMonth + 1);
+      if (viewMonth === 11) loadCalendar(viewYear + 1, 0);
+      else loadCalendar(viewYear, viewMonth + 1);
     };
 
     init();
