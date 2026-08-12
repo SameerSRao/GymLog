@@ -77,3 +77,16 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
     return TokenResponse(
         access_token=_make_token(user), token_type="bearer"
     )
+
+
+@router.get("/auth/demo", response_model=TokenResponse)
+def demo_login(db: Session = Depends(get_db)):
+    """Return a JWT for the demo user; 503 if demo user is not seeded."""
+    user = get_user_by_username(db, "demo")
+    if not user or not user.is_demo:
+        raise HTTPException(
+            status_code=503, detail="Demo unavailable"
+        )
+    return TokenResponse(
+        access_token=_make_token(user), token_type="bearer"
+    )
