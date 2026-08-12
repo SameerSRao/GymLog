@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Import — GymLog</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f0f0f;
+      color: #f0f0f0;
+      font-family: system-ui, sans-serif;
+      padding: 24px 16px 48px;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    .site-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+    .site-logo {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #f0f0f0;
+      text-decoration: none;
+      letter-spacing: 0.05em;
+    }
+    .site-logo:hover { color: #ccc; }
+    .site-nav { display: flex; gap: 8px; }
+    .site-nav a {
+      background: none;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #888;
+      font-size: 0.85rem;
+      padding: 7px 12px;
+      text-decoration: none;
+    }
+    .site-nav a:hover { border-color: #555; color: #ccc; }
+    .site-nav a.active { border-color: #555; color: #f0f0f0; }
+
+    .nav-avatar { position: relative; display: none; align-items: center; }
+    .avatar-btn {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: #2a2a2a; border: 1px solid #444;
+      color: #f0f0f0; font-size: 0.85rem; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center;
+      justify-content: center; padding: 0; line-height: 1;
+    }
+    .avatar-btn:hover { border-color: #777; background: #333; }
+    .avatar-dropdown {
+      display: none; position: absolute; top: calc(100% + 8px); right: 0;
+      background: #1a1a1a; border: 1px solid #333; border-radius: 10px;
+      min-width: 160px; z-index: 300;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6); padding: 12px;
+    }
+    .avatar-dropdown.open { display: block; }
+    .avatar-dname { font-size: 0.88rem; font-weight: 600; color: #f0f0f0; margin-bottom: 8px; }
+    .avatar-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+    .avatar-badges:empty { display: none; }
+    .badge { font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+    .badge-admin { background: #c0a020; color: #0f0f0f; }
+    .badge-premium { background: #1a3a6a; color: #7aabff; border: 1px solid #2a4a8a; }
+    .btn-logout {
+      width: 100%; background: none; border: 1px solid #333;
+      border-radius: 6px; color: #888; font-size: 0.82rem;
+      padding: 7px; cursor: pointer; font-family: inherit;
+    }
+    .btn-logout:hover { border-color: #555; color: #ccc; }
+
+    h1 { font-size: 1.1rem; font-weight: 600; margin-bottom: 6px; }
+    .subtitle { font-size: 0.85rem; color: #555; margin-bottom: 24px; }
+
+    label {
+      display: block;
+      font-size: 0.78rem;
+      color: #555;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 320px;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      color: #f0f0f0;
+      font-family: ui-monospace, monospace;
+      font-size: 0.82rem;
+      padding: 12px;
+      resize: vertical;
+      outline: none;
+      line-height: 1.5;
+    }
+    textarea:focus { border-color: #444; }
+    textarea::placeholder { color: #333; }
+
+    .btn-import {
+      width: 100%;
+      margin-top: 12px;
+      background: #f0f0f0;
+      color: #0f0f0f;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 13px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-import:hover { background: #ddd; }
+    .btn-import:disabled { background: #2a2a2a; color: #555; cursor: default; }
+
+    .result {
+      display: none;
+      margin-top: 20px;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+    }
+    .result.success {
+      background: #0f1f0f;
+      border: 1px solid #1e3a1e;
+      color: #7adf7a;
+    }
+    .result.error {
+      background: #1f0f0f;
+      border: 1px solid #3a1e1e;
+      color: #df7a7a;
+    }
+
+    .result-stat {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #f0f0f0;
+    }
+
+    .error-list {
+      margin-top: 10px;
+      border-top: 1px solid #2a2a2a;
+      padding-top: 10px;
+    }
+    .error-item {
+      font-size: 0.82rem;
+      color: #df7a7a;
+      padding: 3px 0;
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <a href="/" class="site-logo">GymLog</a>
+    <nav class="site-nav">
+      <a href="/workouts">History</a>
+      <a href="/exercises">Exercises</a>
+      <a href="/routines">Routines</a>
+      <div class="nav-avatar" id="nav-avatar">
+        <button class="avatar-btn" id="avatar-btn"></button>
+        <div class="avatar-dropdown" id="avatar-dropdown">
+          <div class="avatar-dname" id="avatar-dname"></div>
+          <div class="avatar-badges" id="avatar-badges"></div>
+          <button class="btn-logout" onclick="logout()">Log out</button>
+        </div>
+      </div>
+    </nav>
+  </header>
+  <script>document.querySelectorAll('.site-nav a').forEach(a => { if (a.pathname === location.pathname) a.classList.add('active'); });</script>
+
+  <h1>Import Workouts</h1>
+  <p class="subtitle">Paste a JSON array of workout sessions to bulk-import history.</p>
+
+  <label for="json-input">JSON payload</label>
+  <textarea id="json-input" placeholder='[
+  {
+    "logged_at": "2025-01-10T09:00:00",
+    "exercises": [
+      {
+        "exercise_id": 99,
+        "sets": [
+          {"reps": 5, "weight_lbs": 135}
+        ]
+      }
+    ]
+  }
+]'></textarea>
+
+  <button class="btn-import" id="import-btn">Import</button>
+
+  <div class="result" id="result"></div>
+
+  <script src="/static/auth.js"></script>
+  <script>
+    checkAuth();
+    (function () {
+      var name = getUsername(); if (!name) return;
+      document.getElementById('avatar-btn').textContent = name.charAt(0).toUpperCase();
+      document.getElementById('avatar-dname').textContent = name;
+      document.getElementById('nav-avatar').style.display = 'flex';
+      var badges = document.getElementById('avatar-badges');
+      if (isAdmin()) { var a = document.createElement('span'); a.className = 'badge badge-admin'; a.textContent = 'admin'; badges.appendChild(a); }
+      if (isPremium()) { var p = document.createElement('span'); p.className = 'badge badge-premium'; p.textContent = 'premium'; badges.appendChild(p); }
+      document.getElementById('avatar-btn').addEventListener('click', function(e) {
+        e.stopPropagation(); document.getElementById('avatar-dropdown').classList.toggle('open');
+      });
+      document.addEventListener('click', function() { document.getElementById('avatar-dropdown').classList.remove('open'); });
+    })();
+
+    document.getElementById('import-btn').addEventListener('click', async function () {
+      var raw = document.getElementById('json-input').value.trim();
+      var resultEl = document.getElementById('result');
+      var btn = document.getElementById('import-btn');
+
+      var payload;
+      try {
+        payload = JSON.parse(raw);
+      } catch (e) {
+        resultEl.className = 'result error';
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = '<strong>Invalid JSON</strong> — ' + e.message;
+        return;
+      }
+
+      if (!Array.isArray(payload)) {
+        resultEl.className = 'result error';
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = '<strong>Invalid format</strong> — payload must be a JSON array.';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Importing…';
+      resultEl.style.display = 'none';
+
+      try {
+        var res = await authFetch('/api/workouts/import', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload),
+        });
+        var data = await res.json();
+
+        if (!res.ok) {
+          resultEl.className = 'result error';
+          resultEl.innerHTML = '<strong>Error ' + res.status + '</strong> — ' + (data.detail || 'Import failed.');
+        } else {
+          var errHtml = '';
+          if (data.errors && data.errors.length > 0) {
+            errHtml = '<div class="error-list">' +
+              data.errors.map(function(e) {
+                return '<div class="error-item">Session ' + e.index + ': ' + e.reason + '</div>';
+              }).join('') +
+              '</div>';
+          }
+          resultEl.className = 'result success';
+          resultEl.innerHTML =
+            '<div class="result-stat">' + data.sessions_created + ' sessions · ' + data.sets_created + ' sets imported</div>' +
+            (data.errors.length > 0 ? '<div style="color:#888;font-size:0.82rem;">' + data.errors.length + ' session(s) skipped</div>' : '') +
+            errHtml;
+        }
+      } catch (e) {
+        resultEl.className = 'result error';
+        resultEl.innerHTML = '<strong>Network error</strong> — ' + e.message;
+      }
+
+      resultEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Import';
+    });
+  </script>
+</body>
+</html>

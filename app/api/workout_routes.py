@@ -44,13 +44,9 @@ def create_workout(
 def batch_import_workouts(
     sessions: list[WorkoutImportRequest],
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_not_demo),
 ):
-    """Bulk-insert workout sessions; admin only, demo users blocked."""
-    if not current_user.get("is_admin"):
-        raise HTTPException(
-            status_code=403, detail="Admin access required"
-        )
+    """Bulk-insert workout sessions for the current user; demo users blocked."""
     return import_workouts(db, sessions, int(current_user["sub"]))
 
 

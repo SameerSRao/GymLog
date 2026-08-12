@@ -246,6 +246,9 @@
     <h2 id="cal-month-label"></h2>
     <button class="cal-nav" id="next-btn">›</button>
   </div>
+  <div id="import-link-row" style="display:none;text-align:right;margin-bottom:16px;">
+    <a href="/import" style="font-size:0.78rem;color:#555;text-decoration:none;">+ Import JSON</a>
+  </div>
 
   <div class="cal-grid" id="cal-grid"></div>
 
@@ -265,6 +268,7 @@
   <script src="/static/auth.js"></script>
   <script>
     checkAuth();
+    if (!isDemo()) document.getElementById('import-link-row').style.display = 'block';
     (function () {
       var name = getUsername(); if (!name) return;
       document.getElementById('avatar-btn').textContent = name.charAt(0).toUpperCase();

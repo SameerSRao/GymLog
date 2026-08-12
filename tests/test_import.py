@@ -118,10 +118,20 @@ def test_import_partial_error_continues(admin_client, db):
     assert len(data["errors"]) == 1
 
 
-def test_import_non_admin_forbidden(client):
-    """Assert POST /api/workouts/import returns 403 for non-admin users."""
-    r = client.post("/api/workouts/import", json=[])
-    assert r.status_code == 403
+def test_import_allowed_for_regular_user(client, db):
+    """Assert POST /api/workouts/import is allowed for non-admin users."""
+    ex = make_exercise(db)
+    payload = [
+        {
+            "logged_at": "2025-01-10T09:00:00",
+            "exercises": [
+                {"exercise_id": ex.id, "sets": [{"reps": 5, "weight_lbs": 100}]},
+            ],
+        }
+    ]
+    r = client.post("/api/workouts/import", json=payload)
+    assert r.status_code == 200
+    assert r.json()["sessions_created"] == 1
 
 
 def test_import_bodyweight_set(admin_client, db):

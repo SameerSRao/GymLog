@@ -57,6 +57,12 @@ def exercise_page(exercise_id: int):
     return FileResponse("app/static/exercise.html", headers=NO_CACHE)
 
 
+@app.get("/import")
+def import_page():
+    """Serve the batch workout import page."""
+    return FileResponse("app/static/import.html", headers=NO_CACHE)
+
+
 @app.get("/log")
 def log_page():
     """Serve the workout logging page."""
