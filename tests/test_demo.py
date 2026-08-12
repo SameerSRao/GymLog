@@ -70,3 +70,64 @@ def test_demo_login_503_when_no_demo_user(db):
     app.dependency_overrides.clear()
 
     assert r.status_code == 503
+
+
+# ---------------------------------------------------------------------------
+# Read-only enforcement — demo user cannot mutate data
+# ---------------------------------------------------------------------------
+
+def test_demo_cannot_create_workout(demo_client, db):
+    """Assert POST /api/workouts returns 403 for demo users."""
+    ex = make_exercise(db)
+    r = demo_client.post("/api/workouts", json={
+        "exercises": [{"exercise_id": ex.id, "sets": [{"reps": 5}]}]
+    })
+    assert r.status_code == 403
+
+
+def test_demo_cannot_update_workout(demo_client, db, demo_user):
+    """Assert PUT /api/workout/{id} returns 403 for demo users."""
+    from app.model.models import Workout
+    session = Workout(user_id=demo_user.id)
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+
+    ex = make_exercise(db)
+    r = demo_client.put(f"/api/workout/{session.id}", json={
+        "exercises": [{"exercise_id": ex.id, "sets": [{"reps": 5}]}]
+    })
+    assert r.status_code == 403
+
+
+def test_demo_cannot_delete_workout(demo_client, db, demo_user):
+    """Assert DELETE /api/workout/{id} returns 403 for demo users."""
+    from app.model.models import Workout
+    session = Workout(user_id=demo_user.id)
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+    r = demo_client.delete(f"/api/workout/{session.id}")
+    assert r.status_code == 403
+
+
+def test_demo_can_read_workouts(demo_client):
+    """Assert GET /api/workouts returns 200 for demo users."""
+    r = demo_client.get("/api/workouts")
+    assert r.status_code == 200
+
+
+def test_demo_cannot_create_routine(demo_client):
+    """Assert POST /api/routines returns 403 for demo users."""
+    r = demo_client.post("/api/routines", json={
+        "name": "My Routine", "exercises": []
+    })
+    assert r.status_code == 403
+
+
+def test_demo_cannot_chat(demo_client):
+    """Assert POST /api/chat returns 403 for demo users."""
+    r = demo_client.post("/api/chat", json={
+        "messages": [{"role": "user", "content": "hello"}]
+    })
+    assert r.status_code == 403

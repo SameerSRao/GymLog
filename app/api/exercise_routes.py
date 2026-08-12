@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
-from app.api.auth_routes import get_current_user
+from app.api.auth_routes import get_current_user, require_not_demo
 from app.api.schemas import (
     CreateExerciseSchema,
     ExerciseDefSchema,
@@ -44,7 +44,7 @@ def list_exercises(
 def add_exercise(
     data: CreateExerciseSchema,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_not_demo),
 ):
     """Create a custom exercise owned by the caller; 400 on invalid muscle group."""
     valid_ids = {mg.id for mg in get_all_muscle_groups(db)}
@@ -70,7 +70,7 @@ def edit_exercise(
     exercise_id: int,
     data: ExerciseUpdate,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_not_demo),
 ):
     """Partially update an exercise; 403 not permitted, 404 not found, 409 name conflict."""
     if data.muscle_group_ids is not None:
@@ -107,7 +107,7 @@ def edit_exercise(
 def remove_exercise(
     exercise_id: int,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_not_demo),
 ):
     """Delete an exercise; 403 not permitted, 404 not found, 409 has history."""
     try:

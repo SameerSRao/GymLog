@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.api.auth_routes import get_current_user
+from app.api.auth_routes import get_current_user, require_not_demo
 from app.db.database import get_db
 from app.services.chat_service import run_chat
 
@@ -30,7 +30,7 @@ class ChatRequest(BaseModel):
 def chat(
     body: ChatRequest,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_not_demo),
 ):
     """Stream an AI response over SSE; 403 if caller is not premium or admin."""
     if not current_user.get("is_premium") and not current_user.get("is_admin"):
