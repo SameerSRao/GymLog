@@ -510,7 +510,7 @@
           </details>`
         : '';
 
-      const canEdit = isAdmin() || info.user_id === getCurrentUserId();
+      const canEdit = !isDemo() && (isAdmin() || info.user_id === getCurrentUserId());
       return `<div class="ex-title-row">
         <h1>${escHtml(info.name)}</h1>
         ${canEdit ? '<button class="btn-edit" onclick="openEditDetail()">Edit</button>' : ''}

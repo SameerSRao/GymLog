@@ -98,6 +98,8 @@ def seed_demo_data(db: Session) -> None:
         db.add(demo)
         db.commit()
         db.refresh(demo)
+    elif not demo.is_demo:
+        return
 
     now = datetime.now(timezone.utc)
     newest = (
@@ -114,7 +116,13 @@ def seed_demo_data(db: Session) -> None:
         if (now - newest_dt).days < 30:
             return
 
-    db.query(Workout).filter(Workout.user_id == demo.id).delete()
+    old_workouts = (
+        db.query(Workout)
+        .filter(Workout.user_id == demo.id)
+        .all()
+    )
+    for w in old_workouts:
+        db.delete(w)
     db.commit()
 
     exercises = (
