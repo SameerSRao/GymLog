@@ -294,6 +294,20 @@
   <script>
     checkAuth();
 
+    if (isDemo()) {
+      var demoBanner = document.createElement('div');
+      demoBanner.style.cssText =
+        'background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;' +
+        'color:#888;font-size:0.85rem;padding:10px 14px;margin-bottom:16px;' +
+        'text-align:center;';
+      demoBanner.innerHTML =
+        'You\'re in demo mode. ' +
+        '<a href="/register" style="color:#f0f0f0;">Sign up</a> to log workouts.';
+      document.body.prepend(demoBanner);
+      var logBtn = document.querySelector('.btn-log');
+      if (logBtn) logBtn.style.display = 'none';
+    }
+
     /* ── Nav avatar ─────────────────────────────────────────────── */
     (function () {
       var name = getUsername(); if (!name) return;

@@ -434,6 +434,7 @@
   <script src="/static/auth.js"></script>
   <script>
     checkAuth();
+
     (function () {
       var name = getUsername(); if (!name) return;
       document.getElementById('avatar-btn').textContent = name.charAt(0).toUpperCase();
@@ -552,12 +553,14 @@
               <span class="ex-sets">${ex.num_sets} set${ex.num_sets !== 1 ? 's' : ''}</span>
             </div>`).join('');
 
-      return `
-        ${exercises}
+      const actionsHtml = isDemo() ? '' : `
         <div class="routine-actions">
           <button class="btn-sm" onclick="enterEdit(${routine.id})">Edit</button>
           <button class="btn-sm danger" onclick="confirmDelete(${routine.id}, '${escAttr(routine.name)}')">Delete</button>
         </div>`;
+      return `
+        ${exercises}
+        ${actionsHtml}`;
     }
 
     // ── Edit mode ─────────────────────────────────────────────────────────

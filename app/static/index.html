@@ -497,6 +497,9 @@
   <script src="/static/auth.js"></script>
   <script>
     checkAuth();
+
+    if (isDemo()) { window.location.replace('/workouts'); }
+
     (function () {
       var name = getUsername(); if (!name) return;
       document.getElementById('avatar-btn').textContent = name.charAt(0).toUpperCase();
