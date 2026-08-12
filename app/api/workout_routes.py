@@ -2,13 +2,20 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.auth_routes import get_current_user, require_not_demo
-from app.api.schemas import WorkoutDetailed, WorkoutRequest, WorkoutResponse
+from app.api.schemas import (
+    ImportResponse,
+    WorkoutDetailed,
+    WorkoutImportRequest,
+    WorkoutRequest,
+    WorkoutResponse,
+)
 from app.db.database import get_db
 from app.services.workout_service import (
     build_workout_detailed,
     delete_workout,
     get_all_workouts,
     get_workout,
+    import_workouts,
     log_workout,
     update_workout,
 )
@@ -31,6 +38,20 @@ def create_workout(
         exercises_logged=len(workout.exercises),
         sets_logged=sum(len(e.sets) for e in workout.exercises),
     )
+
+
+@router.post("/workouts/import", response_model=ImportResponse)
+def batch_import_workouts(
+    sessions: list[WorkoutImportRequest],
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Bulk-insert workout sessions; admin only, demo users blocked."""
+    if not current_user.get("is_admin"):
+        raise HTTPException(
+            status_code=403, detail="Admin access required"
+        )
+    return import_workouts(db, sessions, int(current_user["sub"]))
 
 
 @router.get("/workouts", response_model=list[WorkoutResponse])

@@ -210,3 +210,25 @@ class RoutineDetail(BaseModel):
     name: str
     created_at: datetime
     exercises: list[RoutineExerciseDetail]
+
+
+class WorkoutImportRequest(BaseModel):
+    """One session in a batch import request; logged_at is required."""
+
+    logged_at: datetime
+    exercises: list[ExerciseLogRequest]
+
+
+class ImportError(BaseModel):
+    """One skipped session reported in a batch import response."""
+
+    index: int
+    reason: str
+
+
+class ImportResponse(BaseModel):
+    """Summary returned after a batch import completes."""
+
+    sessions_created: int
+    sets_created: int
+    errors: list[ImportError]

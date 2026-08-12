@@ -2,7 +2,7 @@ from collections import defaultdict
 
 from sqlalchemy.orm import Session, joinedload
 
-from app.api.schemas import WorkoutRequest
+from app.api.schemas import ImportError, ImportResponse, WorkoutRequest
 from app.model.models import Exercise, ExerciseDef, Workout
 
 
@@ -149,3 +149,65 @@ def delete_workout(
     db.delete(session)
     db.commit()
     return True
+
+
+def import_workouts(
+    db: Session,
+    sessions: list,
+    user_id: int,
+) -> ImportResponse:
+    """Bulk-insert workout sessions; skip invalid ones and report errors."""
+    all_exercise_ids: set[int] = {
+        e.exercise_id
+        for s in sessions
+        for e in s.exercises
+    }
+    valid_ids: set[int] = {
+        row[0]
+        for row in db.query(ExerciseDef.id)
+        .filter(ExerciseDef.id.in_(all_exercise_ids))
+        .all()
+    }
+
+    sessions_created = 0
+    sets_created = 0
+    errors: list[ImportError] = []
+
+    for i, s in enumerate(sessions):
+        invalid = [
+            e.exercise_id
+            for e in s.exercises
+            if e.exercise_id not in valid_ids
+        ]
+        if invalid:
+            errors.append(
+                ImportError(
+                    index=i,
+                    reason=f"exercise_id {invalid[0]} does not exist",
+                )
+            )
+            continue
+
+        workout = Workout(logged_at=s.logged_at, user_id=user_id)
+        db.add(workout)
+        db.flush()
+
+        for exercise in s.exercises:
+            for j, ex_set in enumerate(exercise.sets):
+                db.add(Exercise(
+                    session_id=workout.id,
+                    exercise_id=exercise.exercise_id,
+                    set_number=j + 1,
+                    reps=ex_set.reps,
+                    weight_lbs=ex_set.weight_lbs,
+                ))
+                sets_created += 1
+
+        sessions_created += 1
+
+    db.commit()
+    return ImportResponse(
+        sessions_created=sessions_created,
+        sets_created=sets_created,
+        errors=errors,
+    )
