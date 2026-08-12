@@ -1,4 +1,4 @@
-# Design: Batch CSV Import + Demo User
+# Design: Batch JSON Import + Demo User
 
 Date: 2026-08-11
 
@@ -6,70 +6,82 @@ Date: 2026-08-11
 
 Two independent features:
 
-1. **Batch CSV Import** — authenticated users can upload a CSV of historical workout sessions.
+1. **Batch JSON Import** — programmatic API endpoint for populating workout history (developer/admin use only, no UI).
 2. **Demo User** — unauthenticated visitors can click "Try Demo" to log in as a read-only demo account.
 
 ---
 
-## Feature 1: Batch CSV Import
+## Feature 1: Batch JSON Import
 
-### CSV Format
+### Purpose
 
-One row per set. Grouping key is the exact `timestamp` value — rows sharing a timestamp become one workout session.
+Developer-facing endpoint for bulk-inserting historical workout sessions — intended for data migration, seeding, or scripted population. Not exposed in the UI.
 
-```csv
-timestamp,exercise_name,set_number,reps,weight_lbs
-2025-01-10T09:00:00,Bench Press,1,8,135
-2025-01-10T09:00:00,Bench Press,2,8,135
-2025-01-10T17:30:00,Squat,1,5,225
-2025-01-11T10:00:00,Deadlift,1,5,315
+### Request Format
+
+`POST /api/workouts/import` — JSON body, array of session objects.
+
+```json
+[
+  {
+    "logged_at": "2025-01-10T09:00:00",
+    "exercises": [
+      {
+        "exercise_id": 42,
+        "sets": [
+          {"reps": 8, "weight_lbs": 135},
+          {"reps": 8, "weight_lbs": 135}
+        ]
+      }
+    ]
+  },
+  {
+    "logged_at": "2025-01-10T17:30:00",
+    "exercises": [
+      {
+        "exercise_id": 17,
+        "sets": [
+          {"reps": 5, "weight_lbs": 225}
+        ]
+      }
+    ]
+  }
+]
 ```
 
-- `timestamp` — ISO 8601 datetime. The exact value becomes `logged_at` on the workout session.
-- `exercise_name` — case-insensitive match against the `exercises` table. Unmatched names are skipped and reported in the response; the rest of the file still imports.
-- `set_number` — integer; stored as-is on `exercise_sets`.
-- `reps` — required integer.
-- `weight_lbs` — optional float; empty cell treated as bodyweight (null).
+Each object is a `WorkoutRequest` (existing schema) plus a required `logged_at`. One object = one `workout_session` row. Exercise IDs are exact references — no name matching.
 
-### API Endpoint
+### Auth
 
-`POST /api/workouts/import`
+Admin-only (`is_admin: true` on the calling user). Demo user blocked. Standard JWT in the `Authorization` header.
 
-- Auth: standard JWT (all authenticated users, demo user blocked).
-- Body: multipart form upload, field name `file`, `Content-Type: text/csv`.
-- Response:
+### Response
 
 ```json
 {
   "sessions_created": 14,
   "sets_created": 87,
-  "skipped_rows": [
-    {"row": 12, "reason": "exercise 'Leg Day' not found"},
-    {"row": 31, "reason": "invalid timestamp '2025-13-01T00:00:00'"}
+  "errors": [
+    {"index": 3, "reason": "exercise_id 9999 does not exist"}
   ]
 }
 ```
 
-Row errors are non-fatal: skip the offending row, continue processing, report all errors at the end.
+Per-session errors are non-fatal: skip the failing session, continue, report all errors in the response.
 
 ### Service Layer
 
-New function `import_workouts_from_csv(db, file_bytes, user_id)` in `app/services/workout_service.py`:
+New function `import_workouts(db, sessions, user_id)` in `app/services/workout_service.py`:
 
-1. Parse CSV rows.
-2. Build a name→id map for all exercises (single query, case-insensitive).
-3. Group rows by exact timestamp string.
-4. For each group, call the existing `log_workout` logic, passing the timestamp as `logged_at`.
-5. Collect and return a list of skipped-row errors alongside the created session/set counts.
+1. Validate all `exercise_id` values exist (single query, set lookup).
+2. For each session object, call the existing `log_workout` logic with its `logged_at`.
+3. Collect and return counts and any per-session errors.
 
 No changes to existing routes or service functions.
 
-### UI
+### Schema
 
-- "Import CSV" button added to `/workouts` page.
-- Opens a `<input type="file" accept=".csv">` file picker.
-- On selection, POST to `/api/workouts/import`.
-- Show result banner: "14 sessions imported, 2 rows skipped" with expandable error details.
+New request schema `WorkoutImportRequest` — a `WorkoutRequest` with `logged_at` required (not optional). New response schema `ImportResponse` with `sessions_created`, `sets_created`, `errors`.
 
 ---
 
@@ -115,7 +127,8 @@ No cron job needed. The idempotent startup check handles calendar drift automati
 
 ## Out of Scope
 
-- JSON import format (CSV only for now).
-- Premium gating on import (all authenticated users).
-- Demo data reset on a schedule independent of server restarts.
+- CSV import format.
+- UI for batch import (developer API only).
+- Non-admin users triggering imports.
 - Two-step preview/confirm flow for import.
+- Demo data reset on a schedule independent of server restarts.
