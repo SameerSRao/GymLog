@@ -116,6 +116,8 @@ def update_workout(
         return None
 
     session.raw_input = workout.notes
+    if workout.logged_at:
+        session.logged_at = workout.logged_at
     db.query(Exercise).filter(Exercise.session_id == session_id).delete()
 
     for exercise in workout.exercises:
