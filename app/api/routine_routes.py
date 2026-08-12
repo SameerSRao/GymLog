@@ -87,7 +87,10 @@ def list_routines(
     routines = get_all_routines(db, user_id)
     return [
         RoutineListItem(
-            id=r.id, name=r.name, exercise_count=len(r.exercises)
+            id=r.id,
+            name=r.name,
+            exercise_count=len(r.exercises),
+            created_at=r.created_at,
         )
         for r in routines
     ]
