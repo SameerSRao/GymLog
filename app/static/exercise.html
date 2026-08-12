@@ -510,9 +510,10 @@
           </details>`
         : '';
 
+      const canEdit = isAdmin() || info.user_id === getCurrentUserId();
       return `<div class="ex-title-row">
         <h1>${escHtml(info.name)}</h1>
-        <button class="btn-edit" onclick="openEditDetail()">Edit</button>
+        ${canEdit ? '<button class="btn-edit" onclick="openEditDetail()">Edit</button>' : ''}
       </div>
       <div class="tags">${tags.join('')}</div>
       ${instructionsHtml}`;
