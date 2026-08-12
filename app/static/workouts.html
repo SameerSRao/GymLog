@@ -428,8 +428,10 @@
       allSessions = await res.json();
       buildDateMap();
 
-      const now = new Date();
-      renderCalendar(now.getFullYear(), now.getMonth());
+      var monthParam = new URLSearchParams(location.search).get('month');
+      var calDate = monthParam ? new Date(monthParam + '-01') : new Date();
+      if (isNaN(calDate)) calDate = new Date();
+      renderCalendar(calDate.getFullYear(), calDate.getMonth());
       renderRecent();
     }
 
