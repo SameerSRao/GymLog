@@ -1,9 +1,26 @@
 services:
-  api:
-    build: .
+  frontend:
+    build: services/frontend
     ports:
-      - "8000:8000"
+      - "8000:80"
+    depends_on:
+      - api
+      - chat
+
+  api:
+    build: services/api
     volumes:
       - ./data:/app/data
     env_file:
       - .env
+    environment:
+      - ALLOWED_ORIGINS=http://localhost:8000
+
+  chat:
+    build: services/chat
+    env_file:
+      - .env
+    environment:
+      - API_BASE_URL=http://api:8000
+    depends_on:
+      - api
