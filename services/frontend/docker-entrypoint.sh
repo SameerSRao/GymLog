@@ -1,4 +1,6 @@
 #!/bin/sh
+PORT=${PORT:-80}
+export PORT
 # Wait up to 60s for the API to respond before starting nginx.
 # This ensures nginx resolves api.railway.internal correctly at startup
 # rather than caching a failed lookup made before the api is ready.
