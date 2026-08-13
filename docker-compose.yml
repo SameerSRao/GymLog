@@ -3,6 +3,11 @@ services:
     build: services/frontend
     ports:
       - "8000:80"
+    environment:
+      - API_HOST=api
+      - API_PORT=8000
+      - CHAT_HOST=chat
+      - CHAT_PORT=8000
     depends_on:
       - api
       - chat
