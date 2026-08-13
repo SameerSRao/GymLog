@@ -11,7 +11,7 @@ from app.client.api_client import api_client
 from app.tools import TOOLS, execute_tool
 
 _client = genai.Client(api_key=os.environ.get("GOOGLE_API_KEY", ""))
-_MODEL = "gemini-2.0-flash"
+_MODEL = "gemini-3-flash-preview"
 
 _CONTEXT_DIR = Path(__file__).parent.parent / "context"
 _SYSTEM_PROMPT = (_CONTEXT_DIR / "system_prompt.md").read_text()

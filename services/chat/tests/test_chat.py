@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import patch
 
 
@@ -82,3 +81,4 @@ def test_chat_streams_for_admin_user(client, auth_headers):
             headers=auth_headers,
         )
     assert r.status_code == 200
+    assert "text/event-stream" in r.headers["content-type"]
