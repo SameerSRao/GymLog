@@ -1,6 +1,10 @@
 #!/bin/sh
-# Extract the first nameserver from /etc/resolv.conf so nginx can use it
-# as a dynamic resolver (required when proxy_pass uses a variable).
-NGINX_RESOLVER=$(grep -m1 '^nameserver' /etc/resolv.conf | awk '{print $2}')
+# Read the first nameserver from /etc/resolv.conf.
+# nginx requires IPv6 addresses in brackets, so wrap them if needed.
+NS=$(grep -m1 '^nameserver' /etc/resolv.conf | awk '{print $2}')
+case "$NS" in
+    *:*) NGINX_RESOLVER="[$NS]" ;;
+    *)   NGINX_RESOLVER="$NS" ;;
+esac
 export NGINX_RESOLVER
 exec /docker-entrypoint.sh "$@"
