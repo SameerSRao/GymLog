@@ -206,7 +206,9 @@ All database logic for workouts. Routes call these; these functions never touch 
 
 **`get_workout(db, session_id, user_id)`** — fetches by session ID and user ID. Returns `None` if not found or not owned.
 
-**`get_all_workouts(db, user_id, year, month)`** — lists all sessions for the user. If both `year` and `month` are provided, filters to that calendar month using `datetime` range bounds.
+**`get_all_workouts(db, user_id, year, month, limit)`** — lists sessions for the user, newest first. If both `year` and `month` are provided, filters to that calendar month. If `limit` is provided, caps the result to that many rows (applied after ordering, so you get the N most recent).
+
+**`count_workouts(db, user_id)`** — returns total session count via `SELECT COUNT(*)`. Used by `GET /api/workouts/count` to avoid serializing rows just to count them.
 
 **`update_workout(db, session_id, workout, user_id)`** — deletes all existing `exercise_sets` rows for the session, then re-inserts from the request. Returns `None` if not found.
 
@@ -226,7 +228,8 @@ Thin HTTP handlers. Every route calls a service function, handles the 404 case, 
 |--------|------|------|---------|
 | POST | `/api/workouts` | non-demo | `create_workout` |
 | POST | `/api/workouts/import` | non-demo | `batch_import_workouts` |
-| GET | `/api/workouts` | any | `list_workouts` |
+| GET | `/api/workouts/count` | any | `workout_count` |
+| GET | `/api/workouts` | any | `list_workouts` — optional `?year=&month=` and `?limit=N` |
 | GET | `/api/workout/{session_id}` | any | `fetch_workout` |
 | PUT | `/api/workout/{session_id}` | non-demo | `replace_workout` |
 | DELETE | `/api/workout/{session_id}` | non-demo | `remove_workout` |

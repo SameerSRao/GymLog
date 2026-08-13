@@ -427,8 +427,8 @@
     });
 
     async function init() {
-      // Recent list: all workouts, no filter
-      const recentRes = await authFetch('/api/workouts');
+      // Recent list: newest 20 only — no need to load full history
+      const recentRes = await authFetch('/api/workouts?limit=20');
       recentSessions = await recentRes.json();
       renderRecent();
 

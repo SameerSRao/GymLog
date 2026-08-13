@@ -12,6 +12,7 @@ from app.workouts.schemas import (
 )
 from app.workouts.service import (
     build_workout_detailed,
+    count_workouts,
     delete_workout,
     get_all_workouts,
     get_workout,
@@ -50,16 +51,31 @@ def batch_import_workouts(
     return import_workouts(db, sessions, int(current_user["sub"]))
 
 
+@router.get("/workouts/count")
+def workout_count(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Return the total number of workout sessions for the current user."""
+    return {"total": count_workouts(db, int(current_user["sub"]))}
+
+
 @router.get("/workouts", response_model=list[WorkoutResponse])
 def list_workouts(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
     year: int | None = None,
     month: int | None = None,
+    limit: int | None = None,
 ):
-    """Return workout sessions for the current user, optionally filtered by month."""
+    """Return workout sessions for the current user, newest first.
+
+    Optionally filtered by year+month and/or capped to limit rows.
+    """
     user_id = int(current_user["sub"])
-    sessions = get_all_workouts(db, user_id, year=year, month=month)
+    sessions = get_all_workouts(
+        db, user_id, year=year, month=month, limit=limit
+    )
     return [
         WorkoutResponse(
             session_id=s.id,

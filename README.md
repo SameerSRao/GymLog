@@ -132,7 +132,8 @@ All endpoints live under `/api`. Full request/response shapes are in [`services/
 |--------|----------|---------------|-------------|
 | POST | `/api/workouts` | Yes (non-demo) | Log a workout session |
 | POST | `/api/workouts/import` | Yes (non-demo) | Bulk-insert historical sessions |
-| GET | `/api/workouts` | Yes | List sessions; optional `?year=&month=` filter |
+| GET | `/api/workouts/count` | Yes | Total session count for current user |
+| GET | `/api/workouts` | Yes | List sessions; optional `?year=&month=` and `?limit=N` |
 | GET | `/api/workout/{id}` | Yes | Full detail with exercises and sets |
 | PUT | `/api/workout/{id}` | Yes (non-demo) | Replace all exercises/sets |
 | DELETE | `/api/workout/{id}` | Yes (non-demo) | Delete session and all sets |
