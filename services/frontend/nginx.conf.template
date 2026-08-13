@@ -3,7 +3,7 @@ server {
     root /usr/share/nginx/html;
 
     # Resolver injected at startup from /etc/resolv.conf via docker-entrypoint.sh
-    resolver ${NGINX_RESOLVER} valid=10s ipv6=off;
+    resolver ${NGINX_RESOLVER} valid=10s;
 
     location /static/ {
         root /usr/share/nginx/html;
