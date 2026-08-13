@@ -6,6 +6,7 @@ python-jose[cryptography]
 bcrypt
 python-multipart
 python-dotenv
+psycopg2-binary
 pytest
 httpx
 pytest-asyncio
