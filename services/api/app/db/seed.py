@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Exercise, ExerciseDef, MuscleGroup, User, Workout
 from app.auth.service import hash_password
 
-_EXERCISES_FILE = Path(__file__).parent.parent.parent / "exercises.json"
+_EXERCISES_FILE = Path(__file__).parent / "exercises.json"
 
 # Canonical name wins; all aliases map to it
 _ALIASES: dict[str, str] = {
