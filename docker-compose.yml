@@ -4,6 +4,7 @@ services:
     ports:
       - "8000:80"
     environment:
+      - PORT=80
       - API_HOST=api
       - API_PORT=8000
       - CHAT_HOST=chat
