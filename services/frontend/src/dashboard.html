@@ -350,13 +350,20 @@
     }
     async function loadStats() {
       try {
-        const res = await authFetch('/api/workouts');
-        if (!res.ok) return;
-        const sessions = await res.json();
-        const total = sessions.length;
+        const [countRes, recentRes] = await Promise.all([
+          authFetch('/api/workouts/count'),
+          authFetch('/api/workouts?limit=90'),
+        ]);
+        if (!countRes.ok || !recentRes.ok) return;
+        const { total } = await countRes.json();
+        const sessions = await recentRes.json();
         const weekStart = getWeekStart();
-        const thisWeek = sessions.filter(s => new Date(s.logged_at) >= weekStart).length;
-        const loggedDates = new Set(sessions.map(s => toLocalKey(new Date(s.logged_at))));
+        const thisWeek = sessions.filter(
+          s => new Date(s.logged_at) >= weekStart
+        ).length;
+        const loggedDates = new Set(
+          sessions.map(s => toLocalKey(new Date(s.logged_at)))
+        );
         let streak = 0;
         const today = new Date(); today.setHours(0,0,0,0);
         const startOffset = loggedDates.has(toLocalKey(today)) ? 0 : 1;

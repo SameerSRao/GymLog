@@ -100,8 +100,13 @@ def get_all_workouts(
     user_id: int,
     year: int | None = None,
     month: int | None = None,
+    limit: int | None = None,
 ) -> list[Workout]:
-    """Return workout sessions for user_id, optionally filtered to one month."""
+    """Return workout sessions for user_id, newest first.
+
+    Optionally filtered to one calendar month via year+month, and/or
+    capped to limit rows. Omitting limit returns all sessions.
+    """
     q = db.query(Workout).filter(Workout.user_id == user_id)
     if year is not None and month is not None:
         start = datetime(year, month, 1)
@@ -111,7 +116,19 @@ def get_all_workouts(
             else datetime(year, month + 1, 1)
         )
         q = q.filter(Workout.logged_at >= start, Workout.logged_at < end)
-    return q.order_by(Workout.logged_at.desc()).all()
+    q = q.order_by(Workout.logged_at.desc())
+    if limit is not None:
+        q = q.limit(limit)
+    return q.all()
+
+
+def count_workouts(db: Session, user_id: int) -> int:
+    """Return the total number of workout sessions for user_id."""
+    return (
+        db.query(Workout)
+        .filter(Workout.user_id == user_id)
+        .count()
+    )
 
 
 def update_workout(
