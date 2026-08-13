@@ -1,0 +1,66 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0f0f0f;
+  color: #f0f0f0;
+  font-family: system-ui, sans-serif;
+  padding: 24px 16px 48px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.site-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+.site-logo {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #f0f0f0;
+  text-decoration: none;
+  letter-spacing: 0.05em;
+}
+.site-logo:hover { color: #ccc; }
+.site-nav { display: flex; gap: 8px; align-items: center; }
+.site-nav a {
+  background: none;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #888;
+  font-size: 0.85rem;
+  padding: 7px 12px;
+  text-decoration: none;
+}
+.site-nav a:hover { border-color: #555; color: #ccc; }
+.site-nav a.active { border-color: #555; color: #f0f0f0; }
+
+.nav-avatar { position: relative; display: none; align-items: center; }
+.avatar-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: #2a2a2a; border: 1px solid #444;
+  color: #f0f0f0; font-size: 0.85rem; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center;
+  justify-content: center; padding: 0; line-height: 1;
+}
+.avatar-btn:hover { border-color: #777; background: #333; }
+.avatar-dropdown {
+  display: none; position: absolute; top: calc(100% + 8px); right: 0;
+  background: #1a1a1a; border: 1px solid #333; border-radius: 10px;
+  min-width: 160px; z-index: 300;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6); padding: 12px;
+}
+.avatar-dropdown.open { display: block; }
+.avatar-dname { font-size: 0.88rem; font-weight: 600; color: #f0f0f0; margin-bottom: 8px; }
+.avatar-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.avatar-badges:empty { display: none; }
+.badge { font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+.badge-admin { background: #c0a020; color: #0f0f0f; }
+.badge-premium { background: #1a3a6a; color: #7aabff; border: 1px solid #2a4a8a; }
+.btn-logout {
+  width: 100%; background: none; border: 1px solid #333;
+  border-radius: 6px; color: #888; font-size: 0.82rem;
+  padding: 7px; cursor: pointer; font-family: inherit;
+}
+.btn-logout:hover { border-color: #555; color: #ccc; }

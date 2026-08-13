@@ -1,0 +1,141 @@
+.cal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.cal-header h2 { font-size: 1.1rem; font-weight: 600; }
+
+.cal-nav {
+  background: none;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #888;
+  font-size: 0.9rem;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.cal-nav:hover { border-color: #555; color: #ccc; }
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.cal-dow {
+  text-align: center;
+  font-size: 0.72rem;
+  color: #555;
+  padding-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cal-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #555;
+  position: relative;
+}
+.cal-day.other-month { color: #2a2a2a; }
+.cal-day.today { color: #f0f0f0; }
+.cal-day.today::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  width: 4px; height: 4px;
+  background: #555;
+  border-radius: 50%;
+}
+.cal-day.has-workout {
+  background: #1e2a1e;
+  color: #7adf7a;
+  cursor: pointer;
+  font-weight: 600;
+}
+.cal-day.has-workout:hover { background: #253525; }
+.cal-day.has-workout.today { background: #253525; color: #9fff9f; }
+
+.cal-day .multi-badge {
+  font-size: 0.55rem;
+  color: #5aaf5a;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  font-size: 0.78rem;
+  color: #555;
+}
+.legend-dot { width: 12px; height: 12px; background: #1e2a1e; border-radius: 3px; }
+
+.day-picker {
+  display: none;
+  position: fixed;
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 10px;
+  padding: 8px 0;
+  z-index: 100;
+  min-width: 200px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+.day-picker.open { display: block; }
+
+.day-picker-header {
+  font-size: 0.75rem;
+  color: #555;
+  padding: 6px 14px 10px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.day-picker-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: #ccc;
+  text-decoration: none;
+}
+.day-picker-item:hover { background: #252525; }
+.day-picker-item span { font-size: 0.75rem; color: #555; }
+
+.recent-section { margin-top: 32px; }
+
+.section-title {
+  font-size: 0.72rem;
+  color: #444;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.session-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  text-decoration: none;
+  color: inherit;
+}
+.session-row:hover { border-color: #3a3a3a; background: #1e1e1e; }
+.session-row-date { font-size: 0.9rem; color: #ccc; }
+.session-row-meta { font-size: 0.78rem; color: #555; }
+.session-row-arrow { color: #333; font-size: 1rem; }
+.session-row:hover .session-row-arrow { color: #666; }
