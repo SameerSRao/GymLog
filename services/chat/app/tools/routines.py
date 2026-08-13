@@ -137,7 +137,10 @@ def handle_routine_tool(
     """Dispatch a routine tool call; return result as a JSON string."""
     if name == "get_routines":
         try:
-            routines = api_client.get_routines(token)
+            summaries = api_client.get_routines(token)
+            routines = [
+                api_client.get_routine(token, r["id"]) for r in summaries
+            ]
         except Exception as exc:
             return json.dumps({"error": str(exc)})
         return json.dumps({"routines": routines, "count": len(routines)})
