@@ -2,8 +2,8 @@ server {
     listen 80;
     root /usr/share/nginx/html;
 
-    # Railway's internal DNS — resolves .railway.internal hostnames dynamically
-    resolver 127.0.0.11 valid=10s ipv6=off;
+    # Resolver injected at startup from /etc/resolv.conf via docker-entrypoint.sh
+    resolver ${NGINX_RESOLVER} valid=10s ipv6=off;
 
     location /static/ {
         root /usr/share/nginx/html;
