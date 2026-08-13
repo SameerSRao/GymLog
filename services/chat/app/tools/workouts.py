@@ -197,11 +197,15 @@ def handle_workout_tool(
                 logged = logged.replace(tzinfo=timezone.utc)
             if logged < cutoff:
                 continue
+            detail = api_client.get_workout(token, w["session_id"])
+            exercises_done = list(
+                {ex["name"] for ex in detail.get("exercises", [])}
+            )
             recent.append({
                 "session_id": w["session_id"],
                 "date": logged.strftime("%Y-%m-%d"),
+                "exercises": exercises_done,
                 "total_sets": w["sets_logged"],
-                "exercises_count": w["exercises_logged"],
             })
         return json.dumps({"workouts": recent, "count": len(recent)})
 
