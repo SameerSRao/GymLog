@@ -1,4 +1,4 @@
-if (localStorage.getItem('access_token') && !isTokenExpired()) {
+if (localStorage.getItem('access_token')) {
   window.location.replace('/');
 }
 

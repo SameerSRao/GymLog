@@ -3,15 +3,8 @@
     return localStorage.getItem('access_token');
   }
 
-  function isTokenExpired() {
-    var payload = getTokenPayload();
-    if (!payload || !payload.exp) return true;
-    return Date.now() / 1000 >= payload.exp;
-  }
-
   function checkAuth() {
-    if (!getToken() || isTokenExpired()) {
-      localStorage.removeItem('access_token');
+    if (!getToken()) {
       window.location.replace('/login');
     }
   }
@@ -48,7 +41,6 @@
   function getCurrentUserId() { var p = getTokenPayload(); return p ? parseInt(p.sub, 10) : null; }
 
   window.checkAuth = checkAuth;
-  window.isTokenExpired = isTokenExpired;
   window.authFetch = authFetch;
   window.logout = logout;
   window.getTokenPayload = getTokenPayload;
