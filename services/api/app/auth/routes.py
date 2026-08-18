@@ -17,7 +17,7 @@ from app.db.database import get_db
 
 router = APIRouter()
 
-_TOKEN_EXPIRE_HOURS = 720
+_TOKEN_EXPIRE_HOURS = 24
 _bearer = HTTPBearer()
 
 
