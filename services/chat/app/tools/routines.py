@@ -3,7 +3,11 @@ import json
 from google.genai import types
 
 from app.client.api_client import api_client
-from app.tools.base import _best_exercise_match, _resolve_routine
+from app.tools.base import (
+    _not_found_error,
+    _resolve_exercise_names,
+    _resolve_routine,
+)
 
 ROUTINE_DECLARATIONS = [
     types.FunctionDeclaration(
@@ -103,31 +107,27 @@ ROUTINE_DECLARATIONS = [
 ]
 
 
-def _resolve_routine_exercises(
+def _build_routine_exercises(
     exercise_inputs: list[dict],
     ex_by_name: dict,
     all_ex: list[dict],
 ) -> tuple[list[dict], list[str]]:
-    """Resolve exercise name dicts to routine exercise request dicts.
+    """Resolve exercise inputs to routine exercise request dicts.
 
     Returns (request_dicts, not_found_names). Each dict has keys:
     exercise_id, position, num_sets.
     """
-    requests: list[dict] = []
-    not_found: list[str] = []
-    for i, ex in enumerate(exercise_inputs):
-        name_lower = ex["exercise_name"].lower()
-        match = ex_by_name.get(name_lower) or _best_exercise_match(
-            name_lower.split(), all_ex
-        )
-        if not match:
-            not_found.append(ex["exercise_name"])
-            continue
-        requests.append({
-            "exercise_id": match["id"],
+    pairs, not_found = _resolve_exercise_names(
+        exercise_inputs, ex_by_name, all_ex
+    )
+    requests = [
+        {
+            "exercise_id": ex["id"],
             "position": i + 1,
-            "num_sets": ex["sets"],
-        })
+            "num_sets": inp["sets"],
+        }
+        for i, (inp, ex) in enumerate(pairs)
+    ]
     return requests, not_found
 
 
@@ -148,16 +148,11 @@ def handle_routine_tool(
     if name == "create_routine":
         all_ex = api_client.get_exercises(token)
         ex_by_name = {e["name"].lower(): e for e in all_ex}
-        exercise_reqs, not_found = _resolve_routine_exercises(
+        exercise_reqs, not_found = _build_routine_exercises(
             inputs["exercises"], ex_by_name, all_ex
         )
         if not_found:
-            return json.dumps({
-                "error": (
-                    f"Exercises not found: {', '.join(not_found)}."
-                    " Use search_exercises to find the correct name."
-                )
-            })
+            return _not_found_error(not_found)
         data = {"name": inputs["name"], "exercises": exercise_reqs}
         try:
             result = api_client.post_routine(token, data)
@@ -187,15 +182,11 @@ def handle_routine_tool(
         if inputs.get("exercises"):
             all_ex = api_client.get_exercises(token)
             ex_by_name = {e["name"].lower(): e for e in all_ex}
-            exercise_reqs, not_found = _resolve_routine_exercises(
+            exercise_reqs, not_found = _build_routine_exercises(
                 inputs["exercises"], ex_by_name, all_ex
             )
             if not_found:
-                return json.dumps({
-                    "error": (
-                        f"Exercises not found: {', '.join(not_found)}."
-                    )
-                })
+                return _not_found_error(not_found)
         else:
             full_routine = api_client.get_routine(token, routine["id"])
             exercise_reqs = [
