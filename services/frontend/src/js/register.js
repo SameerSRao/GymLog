@@ -29,13 +29,18 @@ async function register() {
   const validationError = validateInputs(username, password);
   if (validationError) { errorEl.textContent = validationError; return; }
   btn.disabled = true;
+  btn.textContent = 'Creating account…';
   errorEl.textContent = '';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
   try {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password, signup_code }),
+      signal: controller.signal,
     });
+    clearTimeout(timer);
     if (res.ok) {
       const data = await res.json();
       localStorage.setItem('access_token', data.access_token);
@@ -50,10 +55,14 @@ async function register() {
     } else {
       errorEl.textContent = 'Something went wrong. Try again.';
     }
-  } catch {
-    errorEl.textContent = 'Something went wrong. Try again.';
+  } catch (e) {
+    clearTimeout(timer);
+    errorEl.textContent = e.name === 'AbortError'
+      ? 'Request timed out. Try again.'
+      : 'Something went wrong. Try again.';
   } finally {
     btn.disabled = false;
+    btn.textContent = 'Create account';
   }
 }
 

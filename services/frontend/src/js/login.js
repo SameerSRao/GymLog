@@ -12,13 +12,18 @@ async function login() {
   const password = passwordEl.value.trim();
   if (!username || !password) return;
   btn.disabled = true;
+  btn.textContent = 'Signing in…';
   errorEl.textContent = '';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
   try {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
+      signal: controller.signal,
     });
+    clearTimeout(timer);
     if (res.ok) {
       const data = await res.json();
       localStorage.setItem('access_token', data.access_token);
@@ -28,10 +33,14 @@ async function login() {
       passwordEl.value = '';
       usernameEl.select();
     }
-  } catch {
-    errorEl.textContent = 'Something went wrong. Try again.';
+  } catch (e) {
+    clearTimeout(timer);
+    errorEl.textContent = e.name === 'AbortError'
+      ? 'Request timed out. Try again.'
+      : 'Something went wrong. Try again.';
   } finally {
     btn.disabled = false;
+    btn.textContent = 'Sign in';
   }
 }
 
@@ -41,9 +50,15 @@ btn.addEventListener('click', login);
 });
 
 document.getElementById('demo-btn').addEventListener('click', async function() {
+  const demoBtn = this;
+  demoBtn.disabled = true;
+  demoBtn.textContent = 'Loading demo…';
   errorEl.textContent = '';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
   try {
-    const res = await fetch('/api/auth/demo');
+    const res = await fetch('/api/auth/demo', { signal: controller.signal });
+    clearTimeout(timer);
     if (res.ok) {
       const data = await res.json();
       localStorage.setItem('access_token', data.access_token);
@@ -51,7 +66,13 @@ document.getElementById('demo-btn').addEventListener('click', async function() {
     } else {
       errorEl.textContent = 'Demo is unavailable right now.';
     }
-  } catch {
-    errorEl.textContent = 'Something went wrong. Try again.';
+  } catch (e) {
+    clearTimeout(timer);
+    errorEl.textContent = e.name === 'AbortError'
+      ? 'Request timed out. Try again.'
+      : 'Something went wrong. Try again.';
+  } finally {
+    demoBtn.disabled = false;
+    demoBtn.textContent = 'Try Demo';
   }
 });
