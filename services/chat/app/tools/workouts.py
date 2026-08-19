@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from google.genai import types
 
 from app.client.api_client import api_client
-from app.tools.base import _best_exercise_match
+from app.tools.base import _not_found_error, _resolve_exercise_names
 
 WORKOUT_DECLARATIONS = [
     types.FunctionDeclaration(
@@ -150,31 +150,29 @@ WORKOUT_DECLARATIONS = [
 ]
 
 
-def _resolve_exercise_inputs(
+def _build_workout_exercises(
     exercise_inputs: list[dict],
     ex_by_name: dict[str, dict],
     all_ex: list[dict],
 ) -> tuple[list[dict], list[str]]:
-    """Resolve exercise name dicts to exercise_id request dicts.
+    """Resolve exercise inputs to workout log dicts.
 
     Returns (exercise_log_dicts, not_found_names).
     Each exercise_log_dict has keys: exercise_id, sets.
     """
-    logged: list[dict] = []
-    not_found: list[str] = []
-    for ex in exercise_inputs:
-        name_lower = ex["exercise_name"].lower()
-        match = ex_by_name.get(name_lower) or _best_exercise_match(
-            name_lower.split(), all_ex
-        )
-        if not match:
-            not_found.append(ex["exercise_name"])
-            continue
-        sets = [
-            {"reps": s["reps"], "weight_lbs": s.get("weight_lbs")}
-            for s in ex["sets"]
-        ]
-        logged.append({"exercise_id": match["id"], "sets": sets})
+    pairs, not_found = _resolve_exercise_names(
+        exercise_inputs, ex_by_name, all_ex
+    )
+    logged = [
+        {
+            "exercise_id": ex["id"],
+            "sets": [
+                {"reps": s["reps"], "weight_lbs": s.get("weight_lbs")}
+                for s in inp["sets"]
+            ],
+        }
+        for inp, ex in pairs
+    ]
     return logged, not_found
 
 
@@ -212,16 +210,11 @@ def handle_workout_tool(
     if name == "log_workout":
         all_ex = api_client.get_exercises(token)
         ex_by_name = {e["name"].lower(): e for e in all_ex}
-        logged, not_found = _resolve_exercise_inputs(
+        logged, not_found = _build_workout_exercises(
             inputs["exercises"], ex_by_name, all_ex
         )
         if not_found:
-            return json.dumps({
-                "error": (
-                    f"Exercises not found: {', '.join(not_found)}."
-                    " Use search_exercises to find the correct name."
-                )
-            })
+            return _not_found_error(not_found)
         raw_ts = inputs.get("logged_at") or local_time
         logged_at = None
         if raw_ts:
@@ -262,16 +255,11 @@ def handle_workout_tool(
         session_id = inputs["session_id"]
         all_ex = api_client.get_exercises(token)
         ex_by_name = {e["name"].lower(): e for e in all_ex}
-        logged, not_found = _resolve_exercise_inputs(
+        logged, not_found = _build_workout_exercises(
             inputs["exercises"], ex_by_name, all_ex
         )
         if not_found:
-            return json.dumps({
-                "error": (
-                    f"Exercises not found: {', '.join(not_found)}."
-                    " Use search_exercises to find the correct name."
-                )
-            })
+            return _not_found_error(not_found)
         data = {"exercises": logged, "notes": inputs.get("notes")}
         try:
             result = api_client.put_workout(token, session_id, data)

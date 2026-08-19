@@ -1,3 +1,40 @@
+import json
+
+
+def _resolve_exercise_names(
+    inputs: list[dict],
+    ex_by_name: dict[str, dict],
+    all_ex: list[dict],
+) -> tuple[list[tuple[dict, dict]], list[str]]:
+    """Resolve exercise name dicts to (input, exercise) pairs.
+
+    Returns (matched_pairs, not_found_names). Each pair is
+    (input_dict, exercise_dict) for downstream callers to shape.
+    """
+    pairs: list[tuple[dict, dict]] = []
+    not_found: list[str] = []
+    for inp in inputs:
+        name_lower = inp["exercise_name"].lower()
+        match = ex_by_name.get(name_lower) or _best_exercise_match(
+            name_lower.split(), all_ex
+        )
+        if not match:
+            not_found.append(inp["exercise_name"])
+        else:
+            pairs.append((inp, match))
+    return pairs, not_found
+
+
+def _not_found_error(names: list[str]) -> str:
+    """Return a JSON error string for unresolved exercise names."""
+    return json.dumps({
+        "error": (
+            f"Exercises not found: {', '.join(names)}."
+            " Use search_exercises to find the correct name."
+        )
+    })
+
+
 def _best_exercise_match(
     query_words: list[str], exercises: list[dict]
 ) -> dict | None:
