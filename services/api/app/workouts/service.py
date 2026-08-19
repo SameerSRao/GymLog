@@ -21,7 +21,7 @@ def build_workout_detailed(db: Session, session: Workout) -> dict:
             )
         )
         .filter(Exercise.session_id == session.id)
-        .order_by(Exercise.set_number)
+        .order_by(Exercise.id)
         .all()
     )
 
