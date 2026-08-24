@@ -294,7 +294,7 @@ function addSet(exerciseId) {
   tr.id = `set-${exerciseId}-${setNum}`;
   tr.innerHTML = `
     <td style="color:#666;font-size:0.85rem;width:32px">${setNum + 1}</td>
-    <td><input type="number" id="reps-${exerciseId}-${setNum}" placeholder="8" min="1" /></td>
+    <td><input type="number" id="reps-${exerciseId}-${setNum}" placeholder="8" min="0" /></td>
     <td><input type="number" id="weight-${exerciseId}-${setNum}" placeholder="—" min="0" step="2.5" /></td>
     <td><button class="btn-icon" onclick="removeSet('${exerciseId}-${setNum}')" title="Remove">✕</button></td>
   `;
@@ -458,7 +458,7 @@ async function submitWorkout() {
       const weightVal = document.getElementById(`weight-${rowId}`).value;
       const weight_lbs = weightVal ? parseFloat(weightVal) : null;
 
-      if (!reps || reps < 1) { showToast('Each set needs a rep count', 'error'); return; }
+      if (isNaN(reps) || reps < 0) { showToast('Each set needs a rep count', 'error'); return; }
       sets.push(weight_lbs !== null ? { reps, weight_lbs } : { reps });
     }
 

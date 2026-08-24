@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from app.exercises.schemas import MuscleGroupSchema
 
@@ -10,6 +10,14 @@ class SetSchema(BaseModel):
 
     reps: int
     weight_lbs: float | None = None
+
+    @field_validator('reps')
+    @classmethod
+    def reps_non_negative(cls, v: int) -> int:
+        """Reject negative rep counts."""
+        if v < 0:
+            raise ValueError('reps must be >= 0')
+        return v
 
 
 class ExerciseLogRequest(BaseModel):

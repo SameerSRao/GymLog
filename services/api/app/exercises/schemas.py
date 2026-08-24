@@ -45,6 +45,7 @@ class SetDetail(BaseModel):
     set_number: int
     reps: int
     weight_lbs: float | None = None
+    estimated_1rm: float | None = None
 
 
 class SessionSummary(BaseModel):
