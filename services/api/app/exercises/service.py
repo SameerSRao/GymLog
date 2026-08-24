@@ -202,6 +202,11 @@ def get_exercise_progression(
                     "set_number": s.set_number,
                     "reps": s.reps,
                     "weight_lbs": s.weight_lbs,
+                    "estimated_1rm": (
+                        round(s.weight_lbs * (1 + s.reps / 30), 1)
+                        if s.weight_lbs is not None
+                        else None
+                    ),
                 }
                 for s in s_sets
             ],

@@ -249,16 +249,32 @@ function renderSessions(sessions) {
     date: dateLabel(s),
   }));
 
+  const e1rmSessions = sessions.filter(
+    s => s.sets.some(set => set.weight_lbs != null)
+  );
+  const e1rmPoints = e1rmSessions.map(s => {
+    const weighted = s.sets.filter(set => set.weight_lbs != null);
+    const avg = weighted.reduce(
+      (sum, set) => sum + set.weight_lbs * (1 + set.reps / 30), 0
+    ) / weighted.length;
+    return { value: Math.round(avg), date: dateLabel(s) };
+  });
+
   chartData = {
     weight: { points: weightPoints, title: 'Best set weight per session (lbs)', highlightIdx: prIdx },
     volume: { points: volumePoints, title: 'Volume load per session (lbs)',     highlightIdx: undefined },
     reps:   { points: repsPoints,   title: 'Total reps per session',            highlightIdx: undefined },
+    e1rm:   { points: e1rmPoints,   title: 'Est. 1RM per session (lbs)',        highlightIdx: undefined },
   };
 
-  const availableViews = ['weight', 'volume', 'reps'].filter(v => chartData[v].points.length >= 2);
+  const availableViews = ['e1rm', 'weight', 'volume', 'reps'].filter(
+    v => chartData[v].points.length >= 2
+  );
 
   if (availableViews.length > 0) {
-    currentView = availableViews.includes('weight') ? 'weight' : availableViews[0];
+    currentView = availableViews.includes('e1rm') ? 'e1rm'
+      : availableViews.includes('weight') ? 'weight'
+      : availableViews[0];
     buildTabs(availableViews);
     showChart(currentView);
   }
@@ -276,10 +292,14 @@ function renderSessions(sessions) {
 
     const setsHtml = s.sets.map(set => {
       const weight = set.weight_lbs != null ? `${set.weight_lbs} lbs` : 'bodyweight';
+      const e1rm = set.weight_lbs != null
+        ? `${Math.round(set.weight_lbs * (1 + set.reps / 30))} lbs`
+        : '—';
       return `<tr>
         <td>${set.set_number}</td>
         <td>${set.reps} reps</td>
         <td>${weight}</td>
+        <td>${e1rm}</td>
       </tr>`;
     }).join('');
 
@@ -292,7 +312,7 @@ function renderSessions(sessions) {
         </div>
       </div>
       <table class="sets-table">
-        <thead><tr><th>Set</th><th>Reps</th><th>Weight</th></tr></thead>
+        <thead><tr><th>Set</th><th>Reps</th><th>Weight</th><th>Est. 1RM</th></tr></thead>
         <tbody>${setsHtml}</tbody>
       </table>
     </div>`;
@@ -359,7 +379,7 @@ function buildTabs(views) {
     tabsEl.innerHTML = '';
     return;
   }
-  const labels = { weight: 'Weight', volume: 'Volume', reps: 'Reps' };
+  const labels = { weight: 'Weight', volume: 'Volume', reps: 'Reps', e1rm: 'Est. 1RM' };
   tabsEl.innerHTML = views.map(v =>
     `<button class="chart-tab${v === currentView ? ' active' : ''}" data-view="${v}" onclick="showChart('${v}')">${labels[v]}</button>`
   ).join('');

@@ -68,6 +68,7 @@ def run_chat(
     )
 
     for _ in range(_MAX_TOOL_ROUNDS):
+        print('round', flush=True)
         for attempt in range(4):
             try:
                 response = _client.models.generate_content(
@@ -83,6 +84,7 @@ def run_chat(
                 raise
 
         candidate = response.candidates[0]
+        print(candidate, flush=True)
         func_calls = [
             p.function_call
             for p in candidate.content.parts
