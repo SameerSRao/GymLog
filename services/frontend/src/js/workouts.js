@@ -72,10 +72,10 @@ async function loadCalendar(year, month) {
 
   const firstDay = new Date(year, month, 1);
   const lastDay  = new Date(year, month + 1, 0);
-  const startOffset = (firstDay.getDay() + 6) % 7;
+  const startOffset = firstDay.getDay();
 
   const grid = document.getElementById('cal-grid');
-  const DOWS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+  const DOWS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
   let html = DOWS.map(d => `<div class="cal-dow">${d}</div>`).join('');
 
   for (let i = 0; i < startOffset; i++) {
